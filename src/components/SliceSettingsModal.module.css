@@ -201,6 +201,51 @@
   margin-right: auto;
 }
 
+.positions {
+  flex: none;
+  overflow: visible;
+}
+
+.posHome {
+  fill: color-mix(in oklab, var(--success) 45%, transparent);
+  stroke: var(--rule-strong);
+}
+
+.pos {
+  cursor: pointer;
+  outline: none;
+}
+
+.pos polygon {
+  fill: var(--hull-raised);
+  stroke: var(--rule-hover);
+  stroke-width: 1.5;
+}
+
+.pos text {
+  fill: var(--success);
+  font-size: 14px;
+  font-weight: 700;
+  text-anchor: middle;
+  dominant-baseline: central;
+  pointer-events: none;
+}
+
+.posOff polygon {
+  fill: var(--hull-sunken);
+  stroke: var(--rule-strong);
+  stroke-dasharray: 3 2;
+}
+
+.posOff text {
+  fill: var(--danger);
+}
+
+.pos:hover polygon,
+.pos:focus-visible polygon {
+  stroke: var(--text);
+}
+
 .whPair {
   display: inline-flex;
   gap: 2px;

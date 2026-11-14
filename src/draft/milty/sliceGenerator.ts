@@ -8,6 +8,7 @@ import {
   isBeta,
   isLegendary,
   planetCountInRange,
+  wormholePositionsOk,
   wormholesPerSliceOk,
 } from "../helpers/sliceGeneration";
 import { factionSystems, systemData } from "~/data/systemData";
@@ -98,6 +99,7 @@ export function generateSlices(
     if (!planetCountInRange(systems, config.minPlanets, config.maxPlanets))
       return false;
     if (!wormholesPerSliceOk(systems, config.wormholesPerSlice)) return false;
+    if (!wormholePositionsOk(slice, config.wormholePositions)) return false;
     return true;
   };
 

@@ -286,7 +286,11 @@ export function coreGenerateSlices({
         // Separate anomalies
         for (let sliceIndex = 0; sliceIndex < t_slices.length; sliceIndex++) {
           let slice = t_slices[sliceIndex];
-          slice = separateAnomalies(slice, sliceShape);
+          slice = separateAnomalies(
+            slice,
+            sliceShape,
+            config.wormholePositions,
+          );
           t_slices[sliceIndex] = slice;
         }
 
@@ -371,7 +375,15 @@ export function coreGenerateSlices({
         );
 
         const shuffledSlice = shuffle(slice);
-        if (!validateSlice(shuffledSlice, config)) break;
+        // Positions aren't final yet (anomaly separation reorders them),
+        // so wormhole positions are checked after that.
+        if (
+          !validateSlice(shuffledSlice, {
+            ...config,
+            wormholePositions: undefined,
+          })
+        )
+          break;
         slices.push(shuffledSlice);
       }
       if (slices.length !== sliceCount) {

@@ -79,6 +79,7 @@ export const buildSliceGenerationConfig = (
     minLegendaries: settings.minLegendaries,
     maxLegendaries: settings.maxLegendaries,
     wormholesPerSlice: settings.wormholesPerSlice,
+    wormholePositions: settings.wormholePositions,
     sliceValueModifiers: {
       entropicScarValue: settings.entropicScarValue,
       techValue: settings.techValue,

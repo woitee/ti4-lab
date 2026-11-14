@@ -119,6 +119,39 @@ export const wormholesPerSliceOk = (
   return mode === "exactlyOne" ? count === 1 : count >= 1;
 };
 
+/** Whether no counted wormhole sits in a forbidden slice position. */
+export const wormholePositionsOk = (
+  slice: SystemIds,
+  allowed: boolean[] | undefined,
+) =>
+  !allowed ||
+  slice.every(
+    (id, idx) => allowed[idx] !== false || countedWormholes(systemData[id]) === 0,
+  );
+
+/**
+ * Move counted wormholes out of forbidden positions by swapping them with
+ * non-wormhole systems in allowed positions. Best effort: the result may
+ * still break the rule when there aren't enough allowed positions.
+ */
+export function moveWormholesToAllowedPositions(
+  slice: SystemIds,
+  allowed: boolean[] | undefined,
+): SystemIds {
+  const result = [...slice];
+  if (!allowed) return result;
+  const isWormhole = (id: SystemId) => countedWormholes(systemData[id]) > 0;
+  result.forEach((id, idx) => {
+    if (allowed[idx] !== false || !isWormhole(id)) return;
+    const target = shuffle(result.map((_, j) => j)).find(
+      (j) => allowed[j] !== false && !isWormhole(result[j]),
+    );
+    if (target === undefined) return;
+    [result[idx], result[target]] = [result[target], result[idx]];
+  });
+  return result;
+}
+
 /**
  * Whether the systems going into `sliceCount` slices hold enough counted
  * wormholes for the "wormholes per slice" setting (exactly one per slice
@@ -342,22 +375,30 @@ function summarizeRaw(
   return { optRes, optInf, sliceValue, wormholes, legendaries };
 }
 
-export function separateAnomalies(origSlice: SystemId[], shape: string[]) {
+export function separateAnomalies(
+  origSlice: SystemId[],
+  shape: string[],
+  wormholePositions?: boolean[],
+) {
   let slice = [...origSlice]; // work with a copy
+  const isGood = (candidate: SystemId[]) =>
+    !sliceHasAdjacentAnomalies(candidate, shape) &&
+    wormholePositionsOk(candidate, wormholePositions);
 
   // First, shuffle a few times and see if we get a good setup.
   // Give up after a reasonable number of tries.
   for (let i = 0; i < 20; i++) {
-    if (!sliceHasAdjacentAnomalies(slice, shape)) return slice;
+    if (isGood(slice)) return slice;
     slice = shuffle(slice);
   }
 
   // No luck.  Walk through slice permutations and use the first good one.
   // (This always fixes the same way, hence a few random stabs before this.)
-  const inspector = (candidate: SystemId[]) => {
-    return !sliceHasAdjacentAnomalies(candidate, shape);
-  };
-  const goodSlice = permutator(slice, inspector);
+  // If no order also keeps wormholes in allowed positions, settle for
+  // separated anomalies; slice validation then rejects the slice.
+  const goodSlice =
+    permutator(slice, isGood) ??
+    permutator(slice, (c) => !sliceHasAdjacentAnomalies(c, shape));
   if (goodSlice) {
     slice = goodSlice;
   }

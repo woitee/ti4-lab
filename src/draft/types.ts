@@ -54,6 +54,8 @@ export type SliceGenerationConfig = {
   minPlanets?: number;
   maxPlanets?: number;
   wormholesPerSlice?: WormholesPerSlice;
+  /** Per slice position (slice index order): false = no wormhole there. */
+  wormholePositions?: boolean[];
   minOptimalInfluence?: number;
   minOptimalResources?: number;
 

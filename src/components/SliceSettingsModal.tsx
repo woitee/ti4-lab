@@ -11,6 +11,7 @@ import {
 } from "~/ui";
 import {
   DEFAULT_SLICE_SETTINGS,
+  SLICE_POSITIONS,
   type SliceGenerationSettings,
   type SliceSettingsFormatType,
 } from "~/draft/sliceSettings";
@@ -51,6 +52,84 @@ const WORMHOLES_PER_SLICE_OPTIONS: {
   { value: "atLeastOne", label: "At least 1" },
   { value: "exactlyOne", label: "Exactly 1" },
 ];
+
+/** Flat-top hex corners around a centre, for the position picker. */
+const hexPoints = (cx: number, cy: number, r: number) =>
+  Array.from({ length: 6 }, (_, i) => {
+    const a = (Math.PI / 3) * i;
+    return `${cx + r * Math.cos(a)},${cy + r * Math.sin(a)}`;
+  }).join(" ");
+
+/** The slice as small hexes; click a position to allow/forbid wormholes there. */
+function WormholePositions({
+  formatType,
+  value,
+  onChange,
+}: {
+  formatType: SliceSettingsFormatType;
+  value: boolean[] | undefined;
+  onChange: (value: boolean[]) => void;
+}) {
+  const positions = SLICE_POSITIONS[formatType];
+  const r = 20;
+  const toPx = ({ x, y }: { x: number; y: number }) => ({
+    px: 1.5 * r * x,
+    py: Math.sqrt(3) * r * (y + x / 2),
+  });
+  const all = [{ x: 0, y: 0 }, ...positions].map(toPx);
+  const pad = r + 2;
+  const minX = Math.min(...all.map((p) => p.px)) - pad;
+  const minY = Math.min(...all.map((p) => p.py)) - pad;
+  const width = Math.max(...all.map((p) => p.px)) + pad - minX;
+  const height = Math.max(...all.map((p) => p.py)) + pad - minY;
+  const toggle = (idx: number) =>
+    onChange(
+      positions.map((_, i) =>
+        i === idx ? value?.[i] === false : value?.[i] !== false,
+      ),
+    );
+
+  return (
+    <svg
+      className={classes.positions}
+      viewBox={`${minX} ${minY} ${width} ${height}`}
+      width={width}
+      height={height}
+      role="group"
+      aria-label="Wormhole positions"
+    >
+      <polygon className={classes.posHome} points={hexPoints(0, 0, r - 1)} />
+      {positions.map((pos, idx) => {
+        const { px, py } = toPx(pos);
+        const allowed = value?.[idx] !== false;
+        const label = `${pos.label}: wormhole ${allowed ? "allowed" : "not allowed"}`;
+        return (
+          <g
+            key={pos.label}
+            role="button"
+            tabIndex={0}
+            aria-pressed={allowed}
+            aria-label={label}
+            className={cx(classes.pos, !allowed && classes.posOff)}
+            onClick={() => toggle(idx)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                toggle(idx);
+              }
+            }}
+          >
+            <title>{label}</title>
+            <polygon points={hexPoints(px, py, r - 1)} />
+            <text x={px} y={py}>
+              {allowed ? "✓" : "✕"}
+            </text>
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
 
 /** Starting point when a planet limit is switched on in formats without a default. */
 const PLANETS_FALLBACK = { min: 3, max: 6 };
@@ -540,6 +619,25 @@ export function SliceSettingsModal({
                   setLocalSettings((prev) => ({ ...prev, wormholesPerSlice: v }))
                 }
                 options={WORMHOLES_PER_SLICE_OPTIONS}
+              />
+            </div>
+            <div className={cx(classes.mini, classes.miniWide)}>
+              <span className={classes.wtxt}>
+                <b>Wormhole positions</b>
+                <small>
+                  Click a tile to allow or forbid a wormhole there. Home is
+                  green.
+                </small>
+              </span>
+              <WormholePositions
+                formatType={formatType}
+                value={s.wormholePositions}
+                onChange={(v) =>
+                  setLocalSettings((prev) => ({
+                    ...prev,
+                    wormholePositions: v.every(Boolean) ? undefined : v,
+                  }))
+                }
               />
             </div>
           </div>
