@@ -1,11 +1,13 @@
 import { expect, test } from "vitest";
 import { draftConfig } from "~/draft/draftConfig";
 import { generateSlices as generateMiltySlices } from "~/draft/milty/sliceGenerator";
-import { generateSlices as generateMiltyEqSlices } from "~/draft/miltyeq/sliceGenerator";
+import {
+  generateMap as generateMiltyEqMap,
+  generateSlices as generateMiltyEqSlices,
+} from "~/draft/miltyeq/sliceGenerator";
 import { generateMap as generateHeisenMap } from "~/draft/heisen/generateMap";
 import {
   describeSliceSearchFailure,
-  HOME_ADJACENT_TILES,
   SLICE_SEARCH_TIME_LIMIT_MS,
   takeSliceSearchFailure,
 } from "~/draft/common/sliceSearch";
@@ -187,7 +189,8 @@ test("slice quality counts are met, not just attempted", () => {
       expect(MILTY_PATH.some((pos) => isAnomaly(slice[pos]))).toBe(false);
       expect(isAnomaly(slice[1]) || systemData[slice[1]].planets.length === 0).toBe(false);
       expect(
-        HOME_ADJACENT_TILES.some((pos) => miltySystemTiers[slice[pos]] === "high"),
+        // Left, front or right of home.
+        [0, 1, 2].some((pos) => miltySystemTiers[slice[pos]] === "high"),
       ).toBe(true);
     }
   }
@@ -260,4 +263,46 @@ test("Nucleus reports an impossible range, and uses the closest slices on reques
   );
   expect(closest?.valid).toBe(false);
   expect(closest?.slices).toHaveLength(6);
+}, 30_000);
+
+test("Milty EQ reports a map that keeps failing its checks, and uses it on request", () => {
+  // Base + PoK with only 7 red tiles: slices and the 6 free map tiles can
+  // never reach the 11 red tiles a 6p map needs.
+  const keptRed = new Set(["39", "40", "46", "47", "48", "49", "50"]);
+  const fewReds = getSystemPool(["base", "pok"]).filter(
+    (id) => miltySystemTiers[id] !== "red" || keptRed.has(id),
+  );
+  const settings: DraftSettings = {
+    ...nucleusSettings({}),
+    type: "miltyeq",
+    sliceGenerationConfig: {
+      ...miltyConfig(6, 10),
+      minOptimalInfluence: 3,
+      minOptimalResources: 2,
+      mecatolPathSystemIndices: EQ_PATH,
+    },
+  };
+
+  takeSliceSearchFailure();
+  const start = performance.now();
+  expect(generateMiltyEqMap(settings, [...fewReds])).toBeUndefined();
+  expect(performance.now() - start).toBeLessThan(SLICE_SEARCH_TIME_LIMIT_MS + 1000);
+  const failure = takeSliceSearchFailure()!;
+  expect(failure.kind).toBe("map");
+  expect(failure.problems.join(" ")).toMatch(
+    /the map is short of red tiles \(needs 11, got [0-7]\)/,
+  );
+  const { title, lines } = describeSliceSearchFailure(failure);
+  expect(title).toBe("Couldn't generate the map");
+  expect(lines[0]).toMatch(/short of red tiles/);
+
+  const anyway = generateMiltyEqMap(
+    {
+      ...settings,
+      sliceGenerationConfig: { ...settings.sliceGenerationConfig, allowInvalidMap: true },
+    },
+    [...fewReds],
+  );
+  expect(anyway?.valid).toBe(false);
+  expect(anyway?.slices).toHaveLength(6);
 }, 30_000);

@@ -183,7 +183,8 @@ export const generateSlices = (
       minAlphas: config.numAlphas ?? DEFAULT_CONFIG.minAlphaWormholes,
       minBetas: config.numBetas ?? DEFAULT_CONFIG.minBetaWormholes,
       minLegendaries: config.minLegendaries ?? DEFAULT_CONFIG.minLegendaries,
-      maxLegendaries: config.maxLegendaries,
+      // The map check caps legendaries at 3 when unset; match it here.
+      maxLegendaries: config.maxLegendaries ?? 3,
       safePath: config.safePathToMecatol,
       safeCenter: config.centerTileNotEmpty,
       highAdjacent: config.highQualityAdjacent,

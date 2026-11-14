@@ -74,6 +74,11 @@ export type SliceGenerationConfig = {
    * instead of failing ("Use closest slices").
    */
   allowClosestSlices?: boolean;
+  /**
+   * When the free map tiles keep failing the map checks (red tiles,
+   * legendaries, adjacent anomalies), keep the best map anyway ("Use anyway").
+   */
+  allowInvalidMap?: boolean;
 };
 
 export type DraftConfig = {

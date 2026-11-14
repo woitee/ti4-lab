@@ -358,15 +358,16 @@ function DraftPrechoice() {
     openSliceSettings();
   };
 
-  // The settings that failed, but take the closest slices the generator finds.
-  const handleUseClosestSlices = () => {
+  // Retry the settings that failed, accepting the closest slices
+  // ("Use closest slices") or a map that fails its checks ("Use anyway").
+  const retryAccepting = (accept: "allowClosestSlices" | "allowInvalidMap") => {
     const draftSettings = failedDraftSettings ?? buildDraftSettings();
     navigateToDraft(
       {
         ...draftSettings,
         sliceGenerationConfig: {
           ...draftSettings.sliceGenerationConfig,
-          allowClosestSlices: true,
+          [accept]: true,
         },
       },
       sliceSettings,
@@ -388,11 +389,26 @@ function DraftPrechoice() {
         </p>
       ))}
       <div className={classes.noticeActions}>
-        {sliceSearchFailure.closestValues && draftMode === "base" && (
-          <Button size="sm" variant="primary" onClick={handleUseClosestSlices}>
-            Use closest slices
-          </Button>
-        )}
+        {sliceSearchFailure.kind === "map"
+          ? draftMode === "base" && (
+              <Button
+                size="sm"
+                variant="primary"
+                onClick={() => retryAccepting("allowInvalidMap")}
+              >
+                Use anyway
+              </Button>
+            )
+          : sliceSearchFailure.closestValues &&
+            draftMode === "base" && (
+              <Button
+                size="sm"
+                variant="primary"
+                onClick={() => retryAccepting("allowClosestSlices")}
+              >
+                Use closest slices
+              </Button>
+            )}
         {getSettingsFormatType(map.selectedMapType) && (
           <Button size="sm" onClick={handleAdjustSliceSettings}>
             Adjust settings

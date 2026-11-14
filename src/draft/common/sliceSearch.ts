@@ -56,8 +56,8 @@ const MAX_STEPS = 3_000_000;
 /** Steps without improvement before restarting from a fresh random set. */
 const RESTART_AFTER = 400;
 
-/** Slice slot positions next to the home system for "high-quality adjacent" (kept from the old post-processing). */
-export const HOME_ADJACENT_TILES = [1, 2, 3];
+/** Slice positions next to the home system (left, front, right), for "high-quality adjacent". */
+export const HOME_ADJACENT_TILES = [0, 1, 2];
 
 // Penalty weights: value and influence/resources shortfalls count 1 per point.
 const W = {
@@ -118,6 +118,11 @@ export type SliceSearchSpec = {
 };
 
 export type SliceSearchFailure = {
+  /**
+   * "slices": no slices meet the settings (default). "map": the slices are
+   * fine, but the free map tiles around them failed the map checks.
+   */
+  kind?: "slices" | "map";
   sliceCount: number;
   limits: Pick<
     SliceLimits,
@@ -261,6 +266,8 @@ function permutations(n: number): number[][] {
 }
 
 const randomInt = (n: number) => Math.floor(Math.random() * n);
+
+const plural = (n: number, noun: string) => `${n} ${noun}${n === 1 ? "" : "s"}`;
 
 /** How far a number is outside [min, max] (0 inside; missing bounds are open). */
 const distanceToRange = (value: number, min?: number, max?: number) =>
@@ -781,12 +788,12 @@ class Search {
     }
     const all = infos.flat();
     const count = (f: (t: TileInfo) => boolean) => all.filter(f).length;
-    if ((L.minAlphas ?? 0) > count((t) => t.alpha)) problems.push(`fewer than ${L.minAlphas} alpha wormholes in the slices`);
-    if ((L.minBetas ?? 0) > count((t) => t.beta)) problems.push(`fewer than ${L.minBetas} beta wormholes in the slices`);
+    if ((L.minAlphas ?? 0) > count((t) => t.alpha)) problems.push(`fewer than ${plural(L.minAlphas!, "alpha wormhole")} in the slices`);
+    if ((L.minBetas ?? 0) > count((t) => t.beta)) problems.push(`fewer than ${plural(L.minBetas!, "beta wormhole")} in the slices`);
     const legendaries = count((t) => t.legendary);
-    if ((L.minLegendaries ?? 0) > legendaries) problems.push(`fewer than ${L.minLegendaries} legendary planets in the slices`);
+    if ((L.minLegendaries ?? 0) > legendaries) problems.push(`fewer than ${plural(L.minLegendaries!, "legendary planet")} in the slices`);
     if (L.maxLegendaries !== undefined && legendaries > L.maxLegendaries)
-      problems.push(`more than ${L.maxLegendaries} legendary planets in the slices`);
+      problems.push(`more than ${plural(L.maxLegendaries, "legendary planet")} in the slices`);
     const quality: [number | undefined, number, string][] = [
       [L.safePath, 1, "a safe path to Mecatol"],
       [L.safeCenter, 2, "a safe center tile"],
@@ -916,6 +923,15 @@ export function describeSliceSearchFailure(failure: SliceSearchFailure): {
   lines: string[];
 } {
   const { limits, sliceCount } = failure;
+  if (failure.kind === "map") {
+    return {
+      title: "Couldn't generate the map",
+      lines: [
+        `The slices are fine, but the map tiles around them kept failing the map checks: ${failure.problems.join("; ")}.`,
+        "Try more tile sets or other slice settings, or use a map with this problem anyway.",
+      ],
+    };
+  }
   const wanted: string[] = [];
   if (limits.minValue !== undefined || limits.maxValue !== undefined) {
     const range =

@@ -28,6 +28,7 @@ import { miltySystemTiers } from "~/data/miltyTileTiers";
 import {
   recordSliceSearchFailure,
   searchSlices,
+  SLICE_SEARCH_TIME_LIMIT_MS,
   SliceLimits,
 } from "./sliceSearch";
 
@@ -102,7 +103,8 @@ export function coreRerollSlice(
     const updatedSlices = [...slices];
     updatedSlices[sliceToRerollIdx] = newSlice;
 
-    const isMapValid = validateMap(config, settings, map, updatedSlices);
+    const isMapValid =
+      mapProblems(config, settings, map, updatedSlices).length === 0;
     if (!isMapValid) return attemptReroll(currentAttempt + 1);
     return {
       slice: newSlice,
@@ -124,7 +126,14 @@ export const coreRerollMap = (settings: DraftSettings, slices: SystemIds[]) => {
   }
 
   return coreGenerateMap(
-    settings,
+    // A map reroll keeps its best attempt (the builder warns when invalid).
+    {
+      ...settings,
+      sliceGenerationConfig: {
+        ...settings.sliceGenerationConfig,
+        allowInvalidMap: true,
+      },
+    },
     getSystemPool(settings.tileGameSets),
     0,
     // do not generate slices, just re-use the existing slices
@@ -132,9 +141,16 @@ export const coreRerollMap = (settings: DraftSettings, slices: SystemIds[]) => {
   );
 };
 
+/** Map attempts (each with new slices) before giving up, within the time limit. */
+const MAX_MAP_ATTEMPTS = 1000;
+
 /**
- * Generate a map and slices using a core function. Returns undefined when no
- * slices meet the settings (the reason is in takeSliceSearchFailure()).
+ * Generate a map and slices using a core function. The free map tiles
+ * (Milty EQ's equidistants) are filled at random and checked; that is retried
+ * with new slices. Returns undefined when no slices meet the settings, or no
+ * map passes the checks within MAX_MAP_ATTEMPTS / SLICE_SEARCH_TIME_LIMIT_MS
+ * (the reason is in takeSliceSearchFailure()). With allowInvalidMap, the
+ * attempt with the fewest map problems is returned instead, valid: false.
  */
 export function coreGenerateMap(
   settings: DraftSettings,
@@ -151,6 +167,8 @@ export function coreGenerateMap(
 ) {
   const config = draftConfig[settings.type];
   const numMapTiles = config.modifiableMapTiles.length;
+  const deadline = performance.now() + SLICE_SEARCH_TIME_LIMIT_MS;
+  let best: { map: Map; slices: SystemIds[]; problems: string[] } | undefined;
 
   for (; ; attempts++) {
     const map = generateEmptyMap(config);
@@ -166,30 +184,56 @@ export function coreGenerateMap(
     );
     const mapSystemIds = shuffle(remainingSystemIds).slice(0, numMapTiles);
 
-    // fill map with chosen systems
+    // fill map with chosen systems (as far as the pool goes)
+    const shortOfTiles = mapSystemIds.length < numMapTiles;
     config.modifiableMapTiles.forEach((idx) => {
+      const systemId = mapSystemIds.pop();
+      if (!systemId) return;
       map[idx] = {
         idx: idx,
         position: mapStringOrder[idx],
         type: "SYSTEM",
-        systemId: mapSystemIds.pop()!,
+        systemId,
       };
     });
 
-    // if we have gone past max attempts, return the map regardless of validation
-    if (attempts > 1000) return { map, slices, valid: false };
-    if (validateMap(config, settings, map, slices)) {
-      return { map, slices, valid: true };
+    const problems = shortOfTiles
+      ? [
+          `not enough tiles left for the map (needs ${numMapTiles}, ${remainingSystemIds.length} left)`,
+        ]
+      : mapProblems(config, settings, map, slices);
+    if (problems.length === 0) return { map, slices, valid: true };
+    if (!best || problems.length < best.problems.length) {
+      best = { map, slices, problems };
+    }
+
+    // Retrying can't add tiles to the pool.
+    if (
+      shortOfTiles ||
+      attempts >= MAX_MAP_ATTEMPTS ||
+      performance.now() >= deadline
+    ) {
+      if (settings.sliceGenerationConfig?.allowInvalidMap) {
+        return { map: best.map, slices: best.slices, valid: false };
+      }
+      recordSliceSearchFailure({
+        kind: "map",
+        sliceCount: settings.numSlices,
+        limits: {},
+        problems: best.problems,
+      });
+      return undefined;
     }
   }
 }
 
-const validateMap = (
+/** What a map (with its slices) gets wrong; empty when it passes. */
+const mapProblems = (
   config: DraftConfig,
   settings: DraftSettings,
   map: Map,
   slices: SystemIds[],
-) => {
+): string[] => {
   // For validating 'globals', we grab the N richest slices.
   const slicesToValidate = systemIdsToSlices(
     config,
@@ -216,11 +260,21 @@ const validateMap = (
     {} as Record<number, SystemId>,
   );
 
-  return (
-    stats.redTiles >= redTilesRequired &&
-    stats.totalLegendary <= maxLegendaries &&
-    !hasAdjacentAnomalies(chosenMapLocations)
-  );
+  const problems: string[] = [];
+  if (stats.redTiles < redTilesRequired) {
+    problems.push(
+      `the map is short of red tiles (needs ${redTilesRequired}, got ${stats.redTiles})`,
+    );
+  }
+  if (stats.totalLegendary > maxLegendaries) {
+    problems.push(
+      `too many legendary planets (at most ${maxLegendaries}, got ${stats.totalLegendary})`,
+    );
+  }
+  if (hasAdjacentAnomalies(chosenMapLocations)) {
+    problems.push("anomalies next to each other on the map");
+  }
+  return problems;
 };
 
 /**

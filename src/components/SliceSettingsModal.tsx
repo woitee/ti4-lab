@@ -665,7 +665,7 @@ export function SliceSettingsModal({
                 <div className={cx(classes.wrow, classes.qrow)}>
                   <span className={classes.wtxt}>
                     <b>High-quality adjacent</b>
-                    <small>Slices with good tiles adjacent to home</small>
+                    <small>Slices with a high-tier tile left, front or right of home</small>
                   </span>
                   <Count
                     label="High-quality adjacent"
