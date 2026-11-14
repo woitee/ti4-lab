@@ -1,4 +1,5 @@
 import { DISCORD_OAUTH_URLS } from "./discord/oauthUrls";
+import { configuredPublicBaseUrl } from "./utils/publicBaseUrl.server";
 
 declare global {
   var env: Env;
@@ -9,16 +10,13 @@ type Env = {
   discordOauthUrl: string;
 };
 
-const localEnv = {
-  baseUrl: "http://localhost:3000",
-  discordOauthUrl: DISCORD_OAUTH_URLS.local,
-};
-
-const prodEnv = {
-  baseUrl: "https://tidraft.com",
-  discordOauthUrl: DISCORD_OAUTH_URLS.production,
-};
-
 export function initEnv() {
-  global.env = process.env.NODE_ENV === "production" ? prodEnv : localEnv;
+  global.env = {
+    // PUBLIC_BASE_URL, or localhost when unset (see README).
+    baseUrl: configuredPublicBaseUrl(),
+    discordOauthUrl:
+      process.env.NODE_ENV === "production"
+        ? DISCORD_OAUTH_URLS.production
+        : DISCORD_OAUTH_URLS.local,
+  };
 }

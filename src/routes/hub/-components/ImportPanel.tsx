@@ -3,6 +3,7 @@ import { useRouter } from "@tanstack/react-router";
 import { IconAlertTriangle, IconCheck, IconFileImport, IconMinus } from "@tabler/icons-react";
 import { importToHub, type ImportResult } from "~/server/hub.functions";
 import { Button, Panel, Text, Textarea, notify } from "~/ui";
+import { displayHost, getPublicBaseUrl } from "~/utils/publicBaseUrl";
 import classes from "../hub.module.css";
 
 const STATUS_TEXT: Record<ImportResult["status"], string> = {
@@ -43,17 +44,19 @@ export function ImportPanel({ defaultOpen }: { defaultOpen: boolean }) {
     }
   };
 
+  const baseUrl = getPublicBaseUrl();
+
   return (
     <Panel title="Import past drafts" icon={<IconFileImport />} collapsible defaultOpen={defaultOpen} summary="Bring in games from before your hub">
       <div className={classes.import}>
         <Text size="sm" tone="muted">
-          Paste draft links separated by commas or new lines. Full links (tidraft.com/draft/brave-red-fox) and bare names (brave-red-fox) both work, and so do multidraft links and preset names.
+          Paste draft links separated by commas or new lines. Full links ({displayHost(baseUrl)}/draft/brave-red-fox) and bare names (brave-red-fox) both work, and so do multidraft links and preset names.
         </Text>
         <Textarea
           aria-label="Draft links"
           mono
           rows={4}
-          placeholder={"https://tidraft.com/draft/brave-red-fox,\nquiet-amber-moon, https://tidraft.com/multidraft/calm-blue-sky"}
+          placeholder={`${baseUrl}/draft/brave-red-fox,\nquiet-amber-moon, ${baseUrl}/multidraft/calm-blue-sky`}
           value={text}
           onChange={(e) => setText(e.currentTarget.value)}
           onKeyDown={(e) => {

@@ -1,3 +1,5 @@
+import { requestPublicBaseUrl } from "~/utils/publicBaseUrl.server";
+import { displayHost } from "~/utils/publicBaseUrl.shared";
 import { Draft, Slice, TechSpecialty, Tile, Wormhole } from "~/types";
 import { calcHexHeight } from "~/utils/positioning";
 import { hydratePresetMap, optimalStatsForSystems } from "~/utils/map";
@@ -66,7 +68,7 @@ export async function generateDraftSlicesImage(
 
   // Draw branding
   drawBranding(ctx, canvasWidth, canvasHeight, {
-    urlText: `tidraft.com/draft/${draftId}`,
+    urlText: `${displayHost(requestPublicBaseUrl())}/draft/${draftId}`,
     urlPosition: "inline",
     logoX: 20,
     logoY: 20,
@@ -170,7 +172,7 @@ export async function generatePresetDraftImage(
   });
 
   drawBranding(ctx, canvasWidth, canvasHeight, {
-    urlText: `tidraft.com/draft/${draftId}`,
+    urlText: `${displayHost(requestPublicBaseUrl())}/draft/${draftId}`,
     urlPosition: "inline",
     logoX: 20,
     logoY: 20,

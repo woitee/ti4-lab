@@ -27,7 +27,7 @@ function pathOf(token: string): string | undefined {
       return undefined;
     }
   }
-  // "tidraft.com/draft/x" without a scheme
+  // "example.com/draft/x" without a scheme (any host: this site, tidraft.com, ...)
   const hostPath = token.match(/^[a-z0-9.-]+\.[a-z]{2,}(\/.*)$/i);
   if (hostPath) return hostPath[1];
   if (token.startsWith("/")) return token;

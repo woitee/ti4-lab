@@ -1,3 +1,4 @@
+import { getPublicBaseUrl } from "~/utils/publicBaseUrl";
 import {
   Button,
   Modal,
@@ -183,8 +184,9 @@ function MapGeneratorContent() {
     (tile) => tile.type === "SYSTEM" && tile.idx !== 0,
   );
 
-  const shareUrl = mapGeneratorHref(mapString, "https://tidraft.com");
-  const imageUrl = `https://tidraft.com/map-generator.png?map=${encodeURIComponent(mapString)}`;
+  const baseUrl = getPublicBaseUrl();
+  const shareUrl = mapGeneratorHref(mapString, baseUrl);
+  const imageUrl = `${baseUrl}/map-generator.png?map=${encodeURIComponent(mapString)}`;
 
   const openHexCount = map.filter((tile) => tile.type === "OPEN").length;
   const isMapComplete = openHexCount === 0;

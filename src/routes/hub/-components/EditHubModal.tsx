@@ -1,3 +1,4 @@
+import { displayHost, getPublicBaseUrl } from "~/utils/publicBaseUrl";
 import { useState } from "react";
 import { useNavigate, useRouter } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
@@ -64,7 +65,7 @@ export function EditHubModal({ hub, opened, onClose }: Props) {
         />
         <TextInput
           label="Link"
-          hint={`tidraft.com/hub/${slug || "…"}. Changing it breaks links you've already shared.`}
+          hint={`${displayHost(getPublicBaseUrl())}/hub/${slug || "…"}. Changing it breaks links you've already shared.`}
           value={slug}
           maxLength={40}
           error={error}

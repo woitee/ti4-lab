@@ -1,3 +1,4 @@
+import { getPublicBaseUrl } from "~/utils/publicBaseUrl";
 import { createFileRoute } from "@tanstack/react-router";
 import { getPresetMap, recordPresetView } from "~/server/presetMaps.functions";
 import type { PresetMapRecord } from "~/drizzle/presetMap.server";
@@ -53,8 +54,9 @@ function presetMeta(preset: PresetMapRecord) {
   const description = preset.description
     ? `${preset.description} — by ${preset.author}`
     : `Map by ${preset.author}`;
-  const imageUrl = presetImageUrl(preset, "https://tidraft.com");
-  const url = `https://tidraft.com/maps/${preset.slug}`;
+  const baseUrl = getPublicBaseUrl();
+  const imageUrl = presetImageUrl(preset, baseUrl);
+  const url = `${baseUrl}/maps/${preset.slug}`;
 
   return [
     { title },

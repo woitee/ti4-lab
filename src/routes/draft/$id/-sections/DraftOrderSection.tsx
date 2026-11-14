@@ -1,3 +1,4 @@
+import { displayHost, getPublicBaseUrl } from "~/utils/publicBaseUrl";
 import { useNavigate } from "@tanstack/react-router";
 import {
   IconArrowBackUp,
@@ -59,7 +60,8 @@ export function DraftOrderSection() {
   const { enabled: audioAlertEnabled } = useAudioAlertPreference();
   const { copy } = useClipboard();
 
-  const link = `https://tidraft.com/draft/${draftUrl}`;
+  const link = `${getPublicBaseUrl()}/draft/${draftUrl}`;
+  const linkText = displayHost(link);
   const entries = getDraftOrderEntries(pickOrder, hydratedPlayers, currentPick);
   const position = entries.findIndex((e) => e.isActive);
 
@@ -101,7 +103,7 @@ export function DraftOrderSection() {
         )}
         <span className={classes.url} title={link}>
           <IconLink size={14} />
-          <span>tidraft.com/draft/{draftUrl}</span>
+          <span>{linkText}</span>
         </span>
         <div className={classes.tools}>
           <div className={classes.toolgrp} role="toolbar" aria-label="Draft tools">
@@ -149,7 +151,7 @@ export function DraftOrderSection() {
           >
             <MenuItem
               icon={<IconCopy />}
-              description={`tidraft.com/draft/${draftUrl}`}
+              description={linkText}
               onClick={() => {
                 copy(link);
                 notify({ title: "Draft link copied", tone: "success" });

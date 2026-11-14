@@ -10,6 +10,8 @@ describe("parseImportToken", () => {
       "https://tidraft.com/draft/brave-red-fox.png",
       "http://localhost:3000/draft/Brave-Red-Fox?x=1#top",
       "tidraft.com/draft/brave-red-fox",
+      "https://ti4.example.test/draft/brave-red-fox",
+      "ti4.example.test/draft/brave-red-fox",
       "/draft/brave-red-fox",
     ]) {
       expect(parseImportToken(url)).toMatchObject({ kind: "draft", key: "brave-red-fox" });

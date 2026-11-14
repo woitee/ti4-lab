@@ -1,3 +1,4 @@
+import { displayHost, getPublicBaseUrl } from "~/utils/publicBaseUrl";
 import { useEffect, useState, useMemo } from "react";
 import {
   Button,
@@ -694,7 +695,7 @@ function VoicesMaster() {
     lineCount: getRemainingLineCount(faction, type, voiceLineMemory),
   });
 
-  const sessionUrl = `https://tidraft.com/voices/${sessionId}`;
+  const sessionUrl = `${getPublicBaseUrl()}/voices/${sessionId}`;
 
   return (
     <div className={styles.page}>
@@ -764,7 +765,7 @@ function VoicesMaster() {
                 </Text>
                 <span className={styles.sessionCode}>{sessionId}</span>
                 <Text size="sm" tone="muted" truncate>
-                  tidraft.com/voices/{sessionId}
+                  {displayHost(sessionUrl)}
                 </Text>
               </div>
               <Button

@@ -1,3 +1,4 @@
+import { publicBaseUrlScript } from "~/utils/publicBaseUrl";
 import globalCss from "~/ui/global.css?url";
 import mainCss from "~/main.css?url";
 
@@ -76,6 +77,7 @@ function RootDocument({ children }: { children: ReactNode }) {
       <head>
         <HeadContent />
         {!forcedColorScheme && <script dangerouslySetInnerHTML={{ __html: themeScript }} />}
+        <script dangerouslySetInnerHTML={{ __html: publicBaseUrlScript() }} />
       </head>
       <body>
         <ThemeProvider forced={forcedColorScheme ?? null}>

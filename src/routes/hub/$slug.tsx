@@ -1,3 +1,4 @@
+import { getPublicBaseUrl } from "~/utils/publicBaseUrl";
 import { createFileRoute } from "@tanstack/react-router";
 import { IconPencil, IconPlus } from "@tabler/icons-react";
 import { Avatar } from "~/components/Account/AccountButton";
@@ -51,7 +52,7 @@ function initials(name: string) {
 function HubPage() {
   const { hub, owner, isOwner, record, draftsPage, sliceSetsPage } = Route.useLoaderData();
   const [editOpened, { open: openEdit, close: closeEdit }] = useDisclosure(false);
-  const shareUrl = `${typeof window === "undefined" ? "https://tidraft.com" : window.location.origin}/hub/${hub.slug}`;
+  const shareUrl = `${getPublicBaseUrl()}/hub/${hub.slug}`;
 
   return (
     <div className={classes.page}>

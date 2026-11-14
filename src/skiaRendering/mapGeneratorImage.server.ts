@@ -1,3 +1,5 @@
+import { requestPublicBaseUrl } from "~/utils/publicBaseUrl.server";
+import { displayHost } from "~/utils/publicBaseUrl.shared";
 import {
   initializeFonts,
   loadAllAssets,
@@ -29,7 +31,7 @@ export async function generateMapGeneratorImageBuffer(
   drawBackground(ctx, dimensions.width, dimensions.height);
   drawMap(ctx, map, [], dimensions);
   drawBranding(ctx, dimensions.width, dimensions.height, {
-    urlText: "tidraft.com/map-generator",
+    urlText: `${displayHost(requestPublicBaseUrl())}/map-generator`,
   });
 
   // Return PNG buffer

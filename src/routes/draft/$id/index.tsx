@@ -1,3 +1,4 @@
+import { getPublicBaseUrl } from "~/utils/publicBaseUrl";
 import { Button, Panel } from "~/ui";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect } from "react";
@@ -223,8 +224,8 @@ function draftMeta(typed: {
   const existingImageUrl = isComplete
     ? (typed.imageUrl ?? undefined)
     : (typed.incompleteImageUrl ?? undefined);
-  const imageUrl =
-    existingImageUrl || `https://tidraft.com/draft/${draftId}.png`;
+  const baseUrl = getPublicBaseUrl();
+  const imageUrl = existingImageUrl || `${baseUrl}/draft/${draftId}.png`;
 
   return [
     { title },
@@ -232,7 +233,7 @@ function draftMeta(typed: {
     { property: "og:title", content: title },
     { property: "og:description", content: description },
     { property: "og:image", content: imageUrl },
-    { property: "og:url", content: `https://tidraft.com/draft/${draftId}` },
+    { property: "og:url", content: `${baseUrl}/draft/${draftId}` },
     { property: "og:type", content: "website" },
     { property: "og:site_name", content: "TI4 Lab" },
     { name: "twitter:card", content: "summary_large_image" },
