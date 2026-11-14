@@ -1,11 +1,12 @@
 import type { FactionSummary as Summary, TechColor } from "~/data/factionSummaries";
+import { TechIcon } from "~/components/icons/TechIcon";
 import classes from "./FactionHelpInfo.module.css";
 
 const techLabels: Record<TechColor, string> = {
-  biotic: "Biotic (green)",
-  cybernetic: "Cybernetic (yellow)",
-  propulsion: "Propulsion (blue)",
-  warfare: "Warfare (red)",
+  biotic: "Biotic",
+  cybernetic: "Cybernetic",
+  propulsion: "Propulsion",
+  warfare: "Warfare",
 };
 
 /** Text panel hanging under a faction card, for what the image lacks. */
@@ -19,16 +20,20 @@ export function FactionSummary({ summary }: { summary: Summary }) {
         <span className={classes.summaryLabel}>Breakthrough</span>
         <span className={classes.synergy}>
           <span className={classes.summaryLabel}>Synergy</span>
-          {breakthrough.synergy.map((color, i) => (
-            <span
-              key={i}
-              className={classes.techDot}
-              style={{ background: `var(--tech-${color})` }}
-              title={techLabels[color]}
-              aria-label={techLabels[color]}
-              role="img"
-            />
-          ))}
+          <span
+            role="img"
+            aria-label={breakthrough.synergy.map((c) => techLabels[c]).join(" + ")}
+            title={breakthrough.synergy.map((c) => techLabels[c]).join(" + ")}
+          >
+            {breakthrough.synergy.map((color, i) => (
+              <TechIcon
+                key={i}
+                techSpecialty={color.toUpperCase() as Uppercase<TechColor>}
+                size={16}
+                label=""
+              />
+            ))}
+          </span>
         </span>
       </div>
       <div className={classes.summaryName}>{breakthrough.name}</div>

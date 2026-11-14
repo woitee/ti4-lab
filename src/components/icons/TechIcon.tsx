@@ -10,14 +10,17 @@ const techIcon: Record<TechSpecialty, string> = {
 type Props = {
   techSpecialty: TechSpecialty;
   size?: number;
+  /** Accessible label; defaults to the specialty name. */
+  label?: string;
 };
 
-export function TechIcon({ techSpecialty, size = 20 }: Props) {
+export function TechIcon({ techSpecialty, size = 20, label }: Props) {
   return (
     <img
       src={techIcon[techSpecialty]}
-      style={{ width: size }}
-      alt={techSpecialty}
+      style={{ width: size, verticalAlign: "middle" }}
+      alt={label ?? techSpecialty}
+      title={label}
     />
   );
 }
