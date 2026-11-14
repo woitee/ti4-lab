@@ -23,6 +23,8 @@ import { Route as VoicesRouteRouteImport } from "./routes/voices/route";
 import { Route as AdminDraftsRouteRouteImport } from "./routes/admin/drafts/route";
 import { Route as AdminLoginRouteRouteImport } from "./routes/admin/login/route";
 import { Route as AdminMapsRouteRouteImport } from "./routes/admin/maps/route";
+import { Route as AdminPresetsRouteRouteImport } from "./routes/admin/presets/route";
+import { Route as DraftPresetChar123idChar125DotpngRouteImport } from "./routes/draft-preset/{$id}[.]png";
 import { Route as DraftNewRouteRouteImport } from "./routes/draft/new/route";
 import { Route as DraftPrechoiceRouteRouteImport } from "./routes/draft/prechoice/route";
 import { Route as DraftTournamentRouteRouteImport } from "./routes/draft/tournament/route";
@@ -115,6 +117,17 @@ const AdminMapsRouteRoute = AdminMapsRouteRouteImport.update({
   path: "/maps",
   getParentRoute: () => AdminRouteRoute,
 } as any);
+const AdminPresetsRouteRoute = AdminPresetsRouteRouteImport.update({
+  id: "/presets",
+  path: "/presets",
+  getParentRoute: () => AdminRouteRoute,
+} as any);
+const DraftPresetChar123idChar125DotpngRoute =
+  DraftPresetChar123idChar125DotpngRouteImport.update({
+    id: "/draft-preset/{$id}.png",
+    path: "/draft-preset/{$id}.png",
+    getParentRoute: () => rootRouteImport,
+  } as any);
 const DraftNewRouteRoute = DraftNewRouteRouteImport.update({
   id: "/new",
   path: "/new",
@@ -238,9 +251,11 @@ export interface FileRoutesByFullPath {
   "/admin/drafts": typeof AdminDraftsRouteRoute;
   "/admin/login": typeof AdminLoginRouteRoute;
   "/admin/maps": typeof AdminMapsRouteRoute;
+  "/admin/presets": typeof AdminPresetsRouteRoute;
   "/draft/new": typeof DraftNewRouteRoute;
   "/draft/prechoice": typeof DraftPrechoiceRouteRoute;
   "/draft/tournament": typeof DraftTournamentRouteRoute;
+  "/draft-preset/{$id}.png": typeof DraftPresetChar123idChar125DotpngRoute;
   "/draft/{$id}.png": typeof DraftChar123idChar125DotpngRoute;
   "/hub/$slug": typeof HubSlugRoute;
   "/map-preset/{$id}.png": typeof MapPresetChar123idChar125DotpngRoute;
@@ -273,9 +288,11 @@ export interface FileRoutesByTo {
   "/admin/drafts": typeof AdminDraftsRouteRoute;
   "/admin/login": typeof AdminLoginRouteRoute;
   "/admin/maps": typeof AdminMapsRouteRoute;
+  "/admin/presets": typeof AdminPresetsRouteRoute;
   "/draft/new": typeof DraftNewRouteRoute;
   "/draft/prechoice": typeof DraftPrechoiceRouteRoute;
   "/draft/tournament": typeof DraftTournamentRouteRoute;
+  "/draft-preset/{$id}.png": typeof DraftPresetChar123idChar125DotpngRoute;
   "/draft/{$id}.png": typeof DraftChar123idChar125DotpngRoute;
   "/hub/$slug": typeof HubSlugRoute;
   "/map-preset/{$id}.png": typeof MapPresetChar123idChar125DotpngRoute;
@@ -311,9 +328,11 @@ export interface FileRoutesById {
   "/admin/drafts": typeof AdminDraftsRouteRoute;
   "/admin/login": typeof AdminLoginRouteRoute;
   "/admin/maps": typeof AdminMapsRouteRoute;
+  "/admin/presets": typeof AdminPresetsRouteRoute;
   "/draft/new": typeof DraftNewRouteRoute;
   "/draft/prechoice": typeof DraftPrechoiceRouteRoute;
   "/draft/tournament": typeof DraftTournamentRouteRoute;
+  "/draft-preset/{$id}.png": typeof DraftPresetChar123idChar125DotpngRoute;
   "/draft/{$id}.png": typeof DraftChar123idChar125DotpngRoute;
   "/hub/$slug": typeof HubSlugRoute;
   "/map-preset/{$id}.png": typeof MapPresetChar123idChar125DotpngRoute;
@@ -350,9 +369,11 @@ export interface FileRouteTypes {
     | "/admin/drafts"
     | "/admin/login"
     | "/admin/maps"
+    | "/admin/presets"
     | "/draft/new"
     | "/draft/prechoice"
     | "/draft/tournament"
+    | "/draft-preset/{$id}.png"
     | "/draft/{$id}.png"
     | "/hub/$slug"
     | "/map-preset/{$id}.png"
@@ -385,9 +406,11 @@ export interface FileRouteTypes {
     | "/admin/drafts"
     | "/admin/login"
     | "/admin/maps"
+    | "/admin/presets"
     | "/draft/new"
     | "/draft/prechoice"
     | "/draft/tournament"
+    | "/draft-preset/{$id}.png"
     | "/draft/{$id}.png"
     | "/hub/$slug"
     | "/map-preset/{$id}.png"
@@ -422,9 +445,11 @@ export interface FileRouteTypes {
     | "/admin/drafts"
     | "/admin/login"
     | "/admin/maps"
+    | "/admin/presets"
     | "/draft/new"
     | "/draft/prechoice"
     | "/draft/tournament"
+    | "/draft-preset/{$id}.png"
     | "/draft/{$id}.png"
     | "/hub/$slug"
     | "/map-preset/{$id}.png"
@@ -457,6 +482,7 @@ export interface RootRouteChildren {
   MapGeneratorRoute: typeof MapGeneratorRoute;
   MapGeneratorDotpngRoute: typeof MapGeneratorDotpngRoute;
   UiKitRoute: typeof UiKitRoute;
+  DraftPresetChar123idChar125DotpngRoute: typeof DraftPresetChar123idChar125DotpngRoute;
   MapPresetChar123idChar125DotpngRoute: typeof MapPresetChar123idChar125DotpngRoute;
   MapsSlugRoute: typeof MapsSlugRoute;
   SoundboardIdRoute: typeof SoundboardIdRoute;
@@ -564,6 +590,20 @@ declare module "@tanstack/react-router" {
       fullPath: "/admin/maps";
       preLoaderRoute: typeof AdminMapsRouteRouteImport;
       parentRoute: typeof AdminRouteRoute;
+    };
+    "/admin/presets": {
+      id: "/admin/presets";
+      path: "/presets";
+      fullPath: "/admin/presets";
+      preLoaderRoute: typeof AdminPresetsRouteRouteImport;
+      parentRoute: typeof AdminRouteRoute;
+    };
+    "/draft-preset/{$id}.png": {
+      id: "/draft-preset/{$id}.png";
+      path: "/draft-preset/{$id}.png";
+      fullPath: "/draft-preset/{$id}.png";
+      preLoaderRoute: typeof DraftPresetChar123idChar125DotpngRouteImport;
+      parentRoute: typeof rootRouteImport;
     };
     "/draft/new": {
       id: "/draft/new";
@@ -719,6 +759,7 @@ interface AdminRouteRouteChildren {
   AdminDraftsRouteRoute: typeof AdminDraftsRouteRoute;
   AdminLoginRouteRoute: typeof AdminLoginRouteRoute;
   AdminMapsRouteRoute: typeof AdminMapsRouteRoute;
+  AdminPresetsRouteRoute: typeof AdminPresetsRouteRoute;
   AdminDraftsIdRawRoute: typeof AdminDraftsIdRawRoute;
 }
 
@@ -726,6 +767,7 @@ const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminDraftsRouteRoute: AdminDraftsRouteRoute,
   AdminLoginRouteRoute: AdminLoginRouteRoute,
   AdminMapsRouteRoute: AdminMapsRouteRoute,
+  AdminPresetsRouteRoute: AdminPresetsRouteRoute,
   AdminDraftsIdRawRoute: AdminDraftsIdRawRoute,
 };
 
@@ -813,6 +855,8 @@ const rootRouteChildren: RootRouteChildren = {
   MapGeneratorRoute: MapGeneratorRoute,
   MapGeneratorDotpngRoute: MapGeneratorDotpngRoute,
   UiKitRoute: UiKitRoute,
+  DraftPresetChar123idChar125DotpngRoute:
+    DraftPresetChar123idChar125DotpngRoute,
   MapPresetChar123idChar125DotpngRoute: MapPresetChar123idChar125DotpngRoute,
   MapsSlugRoute: MapsSlugRoute,
   SoundboardIdRoute: SoundboardIdRoute,

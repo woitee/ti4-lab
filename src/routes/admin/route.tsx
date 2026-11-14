@@ -55,6 +55,9 @@ function AdminLayout() {
             <Link to="/admin/maps" className={classes.tab} activeProps={{ className: classes.active }}>
               Community maps
             </Link>
+            <Link to="/admin/presets" className={classes.tab} activeProps={{ className: classes.active }}>
+              Presets
+            </Link>
           </nav>
           {authEnabled && (
             <div className={classes.logout}>

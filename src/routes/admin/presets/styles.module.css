@@ -1,0 +1,8 @@
+/* Reuses the community maps table; only the columns differ. */
+.list { --cols: minmax(0, 1fr) 64px 84px 56px 110px 132px; }
+.name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.actions { display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
+
+@media (max-width: 759.98px) {
+  .actions { grid-column: 1 / -1; justify-content: flex-start; }
+}

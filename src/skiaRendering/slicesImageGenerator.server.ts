@@ -36,6 +36,7 @@ import { formatSliceValue } from "~/stats";
 export async function generateDraftSlicesImage(
   draft: Draft,
   draftId: string,
+  options: { urlText?: string } = {},
 ): Promise<Buffer> {
   initializeFonts();
   await loadAllAssets();
@@ -68,7 +69,9 @@ export async function generateDraftSlicesImage(
 
   // Draw branding
   drawBranding(ctx, canvasWidth, canvasHeight, {
-    urlText: `${displayHost(requestPublicBaseUrl())}/draft/${draftId}`,
+    urlText:
+      options.urlText ??
+      `${displayHost(requestPublicBaseUrl())}/draft/${draftId}`,
     urlPosition: "inline",
     logoX: 20,
     logoY: 20,
@@ -126,6 +129,7 @@ export async function generateDraftSlicesImage(
 export async function generatePresetDraftImage(
   draft: Draft,
   draftId: string,
+  options: { urlText?: string } = {},
 ): Promise<Buffer> {
   initializeFonts();
   await loadAllAssets();
@@ -172,7 +176,9 @@ export async function generatePresetDraftImage(
   });
 
   drawBranding(ctx, canvasWidth, canvasHeight, {
-    urlText: `${displayHost(requestPublicBaseUrl())}/draft/${draftId}`,
+    urlText:
+      options.urlText ??
+      `${displayHost(requestPublicBaseUrl())}/draft/${draftId}`,
     urlPosition: "inline",
     logoX: 20,
     logoY: 20,

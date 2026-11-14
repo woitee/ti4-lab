@@ -6,6 +6,7 @@ import {
   IconArrowBackUp,
   IconBrandDiscordFilled,
   IconFile,
+  IconLayoutGrid,
   IconInfoCircle,
   IconPlayerPlay,
 } from "@tabler/icons-react";
@@ -48,6 +49,7 @@ import {
 import { DiscordIntegrationModal } from "./-components/DiscordIntegrationModal";
 import { MinorFactionsInfoModal } from "./-components/MinorFactionsInfoModal";
 import { ContinueFromPresetModal } from "./-components/ContinueFromPresetModal";
+import { BrowsePresetsModal } from "./-components/BrowsePresetsModal";
 import { playersFromDiscordData } from "~/utils/discordPlayers";
 import type { DraftPreset } from "~/drizzle/draftPreset.server";
 import { presetPlayerCountError } from "~/utils/draftPreset";
@@ -321,6 +323,9 @@ function DraftPrechoice() {
   const [presetOpened, { open: openPreset, close: closePreset }] =
     useDisclosure(false);
 
+  const [browseOpened, { open: openBrowse, close: closeBrowse }] =
+    useDisclosure(false);
+
   const handleContinueFromPreset = (preset: DraftPreset) => {
     // Discord players are fixed by the bot command, so they can't be padded
     // or truncated to fit the preset.
@@ -457,6 +462,12 @@ function DraftPrechoice() {
         }}
       />
 
+      <BrowsePresetsModal
+        opened={browseOpened}
+        onClose={closeBrowse}
+        playerCount={playerCount}
+        onContinue={handleContinueFromPreset}
+      />
       <ContinueFromPresetModal
         opened={presetOpened}
         onClose={closePreset}
@@ -610,9 +621,15 @@ function DraftPrechoice() {
               </Button>
               <Button
                 block
+                icon={<IconLayoutGrid size={16} />}
+                onClick={openBrowse}
+              >
+                Browse presets
+              </Button>
+              <Button
+                block
                 icon={<IconFile size={16} />}
                 onClick={openPreset}
-                className={discordData ? classes.span : undefined}
               >
                 Continue from preset
               </Button>
@@ -621,6 +638,7 @@ function DraftPrechoice() {
                   block
                   icon={<IconBrandDiscordFilled size={16} />}
                   onClick={openDiscord}
+                  className={classes.span}
                 >
                   Integrate with Discord
                 </Button>

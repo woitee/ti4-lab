@@ -222,6 +222,14 @@ export const draftPresets = sqliteTable("draftPresets", {
   createdAt: text("createdAt")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
+  /** Featured presets are listed publicly on the draft setup page. */
+  featured: integer("featured", { mode: "boolean" }).notNull().default(false),
+  /** Public title of a featured preset (falls back to `name`). */
+  title: text("title"),
+  /** Short public description of a featured preset. */
+  description: text("description"),
+  /** Featured presets are listed by ascending sortOrder. */
+  sortOrder: integer("sortOrder").notNull().default(0),
 });
 
 /** People who signed in with Discord. `id` is the Discord user id. */

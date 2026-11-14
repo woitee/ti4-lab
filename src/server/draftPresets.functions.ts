@@ -2,12 +2,14 @@ import { createServerFn } from "@tanstack/react-start";
 import {
   createDraftPreset,
   draftPresetByName,
+  featuredDraftPresetById,
+  listFeaturedDraftPresets,
 } from "~/drizzle/draftPreset.server";
 import type { DraftPreset } from "~/drizzle/draftPreset.server";
 import { finalizeDraftPresetName } from "~/utils/draftPresetName";
 import { DraftPresetData, draftToPresetData } from "~/utils/draftPreset";
 import { draftPresetDataForNewDraft } from "~/utils/draftFromPreset.server";
-import { expectRecord, isRecord } from "./validate";
+import { expectRecord, expectString, isRecord } from "./validate";
 
 export type SaveDraftPresetInput = {
   name: string;
@@ -36,6 +38,25 @@ export const loadDraftPreset = createServerFn()
       return { success: false, error: `No preset named "${name}" was found.` };
     }
 
+    return {
+      success: true,
+      preset: { ...preset, data: draftPresetDataForNewDraft(preset) },
+    };
+  });
+
+/** Featured presets, for anyone. Only public fields, never preset data. */
+export const getFeaturedDraftPresets = createServerFn().handler(async () => ({
+  presets: await listFeaturedDraftPresets(),
+}));
+
+/** Loads a featured preset by id; unfeatured presets are not found. */
+export const loadFeaturedDraftPreset = createServerFn()
+  .validator((id: string) => expectString(id, "Preset ID"))
+  .handler(async ({ data: id }): Promise<LoadDraftPresetResponse> => {
+    const preset = await featuredDraftPresetById(id);
+    if (!preset) {
+      return { success: false, error: "That preset is no longer available." };
+    }
     return {
       success: true,
       preset: { ...preset, data: draftPresetDataForNewDraft(preset) },

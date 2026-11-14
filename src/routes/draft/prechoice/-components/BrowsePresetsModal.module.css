@@ -1,0 +1,28 @@
+.toolbar { display: flex; align-items: flex-start; gap: 16px; }
+.toggle { flex-shrink: 0; white-space: nowrap; }
+
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; margin: 0; padding: 0; list-style: none; }
+.grid > li { display: flex; min-width: 0; }
+
+.card { display: flex; flex-direction: column; width: 100%; min-width: 0; padding: 0; text-align: left; color: var(--text); font: inherit; background: var(--hull); border: 1px solid var(--rule); border-radius: var(--radius-sm); box-shadow: var(--shadow-card); cursor: pointer; overflow: hidden; transition: background-color var(--dur-quick) var(--ease), border-color var(--dur-quick) var(--ease); }
+.card:hover:not(:disabled) { background: var(--hull-raised); border-color: var(--ion); }
+.card:focus-visible { outline: 2px solid var(--ion); outline-offset: 2px; }
+.card:disabled { cursor: progress; }
+
+/* Previews are wide (slices + factions); cover keeps the slices/map side. */
+.preview { position: relative; display: block; aspect-ratio: 16 / 9; background: var(--hull-sunken); border-bottom: 1px solid var(--rule); }
+.preview img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: left top; }
+.loading { position: absolute; inset: 0; display: grid; place-items: center; background: rgb(0 0 0 / 0.45); }
+
+.body { display: grid; gap: 6px; padding: 10px 12px 12px; }
+.title { font-weight: 700; overflow-wrap: anywhere; }
+.description { font-size: 13px; color: var(--text-muted); overflow-wrap: anywhere; }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+
+.empty { display: grid; justify-items: center; gap: 8px; padding: 40px 16px; color: var(--text-muted); border: 1px dashed var(--rule-strong); border-radius: var(--radius-sm); }
+.link { padding: 0; color: var(--ion); font: inherit; font-size: 13px; background: none; border: 0; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+
+@media (max-width: 575.98px) {
+  .toolbar { flex-direction: column; gap: 10px; }
+  .grid { grid-template-columns: minmax(0, 1fr); }
+}
