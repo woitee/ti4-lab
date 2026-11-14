@@ -7,6 +7,7 @@ import {
   isAlpha,
   isBeta,
   isLegendary,
+  planetCountInRange,
 } from "../helpers/sliceGeneration";
 import { factionSystems, systemData } from "~/data/systemData";
 import { optimalStatsForSystems } from "~/utils/map";
@@ -92,6 +93,8 @@ export function generateSlices(
     if (config.maxSliceValue && totalOptimal > config.maxSliceValue)
       return false;
     if (config.minSliceValue && totalOptimal < config.minSliceValue)
+      return false;
+    if (!planetCountInRange(systems, config.minPlanets, config.maxPlanets))
       return false;
     return true;
   };

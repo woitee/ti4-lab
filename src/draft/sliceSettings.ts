@@ -6,6 +6,9 @@ export type SliceSettingsFormatType = "milty" | "miltyeq" | "heisen";
 export interface SliceGenerationSettings {
   minSliceValue?: number;
   maxSliceValue?: number;
+  /** Planets per slice (all systems in the slice); undefined = no limit. */
+  minPlanets?: number;
+  maxPlanets?: number;
   minOptimalInfluence?: number;
   minOptimalResources?: number;
 
@@ -67,6 +70,8 @@ export const DEFAULT_SLICE_SETTINGS: Record<
     minOptimalResources: 0,
     minSliceValue: 4,
     maxSliceValue: 10,
+    minPlanets: 2,
+    maxPlanets: 5,
     safePathToMecatol: 0,
     centerTileNotEmpty: 0,
     highQualityAdjacent: 0,

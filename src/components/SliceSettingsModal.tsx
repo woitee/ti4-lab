@@ -41,6 +41,9 @@ const FORMAT_NAMES: Record<SliceSettingsFormatType, string> = {
   heisen: "Nucleus",
 };
 
+/** Starting point when a planet limit is switched on in formats without a default. */
+const PLANETS_FALLBACK = { min: 3, max: 6 };
+
 type Props = {
   opened: boolean;
   formatType: SliceSettingsFormatType;
@@ -110,6 +113,45 @@ function Count({
       decrease={handleDecrease}
       increase={handleIncrease}
       decreaseDisabled={decreaseDisabled}
+    />
+  );
+}
+
+/** Slice value limit in quarter steps with free entry; "off" when switched off. */
+function SliceValueLimit({
+  label,
+  value,
+  onChange,
+  defaultValue,
+}: {
+  label: string;
+  value: number | undefined;
+  onChange: (value: number | undefined) => void;
+  defaultValue?: number;
+}) {
+  if (value === undefined) {
+    return (
+      <NumberStepper
+        size="sm"
+        label={label}
+        display={<i>off</i>}
+        decrease={() => {}}
+        increase={() => onChange(defaultValue ?? 0.25)}
+        decreaseDisabled
+      />
+    );
+  }
+  return (
+    <NumberField
+      size="sm"
+      aria-label={label}
+      value={value}
+      onChange={(val) =>
+        onChange(typeof val === "number" && val > 0 ? val : undefined)
+      }
+      step={0.25}
+      min={0}
+      format={{ maximumFractionDigits: 2 }}
     />
   );
 }
@@ -328,26 +370,47 @@ export function SliceSettingsModal({
               <small>Every slice lands in this range</small>
             </div>
             <div className={classes.range}>
-              <Count
+              <SliceValueLimit
                 label="Min slice value"
-                property="minSliceValue"
                 value={s.minSliceValue}
-                onChange={handleSettingChange}
-                allowUndefined
+                onChange={(v) => handleSettingChange("minSliceValue", v)}
                 defaultValue={defaults.minSliceValue}
               />
               <span className={classes.to}>to</span>
-              <Count
+              <SliceValueLimit
                 label="Max slice value"
-                property="maxSliceValue"
                 value={s.maxSliceValue}
-                onChange={handleSettingChange}
-                allowUndefined
+                onChange={(v) => handleSettingChange("maxSliceValue", v)}
                 defaultValue={defaults.maxSliceValue}
               />
             </div>
           </div>
           <ValueTrack min={s.minSliceValue} max={s.maxSliceValue} />
+          <div className={classes.field}>
+            <div className={classes.lbl}>
+              <b>Planets</b>
+              <small>Per slice, across all its systems</small>
+            </div>
+            <div className={classes.range}>
+              <Count
+                label="Min planets per slice"
+                property="minPlanets"
+                value={s.minPlanets}
+                onChange={handleSettingChange}
+                allowUndefined={defaults.minPlanets === undefined}
+                defaultValue={defaults.minPlanets ?? PLANETS_FALLBACK.min}
+              />
+              <span className={classes.to}>to</span>
+              <Count
+                label="Max planets per slice"
+                property="maxPlanets"
+                value={s.maxPlanets}
+                onChange={handleSettingChange}
+                allowUndefined={defaults.maxPlanets === undefined}
+                defaultValue={defaults.maxPlanets ?? PLANETS_FALLBACK.max}
+              />
+            </div>
+          </div>
           <div className={classes.field}>
             <div className={classes.lbl}>
               <b>Minimum optimal</b>
@@ -375,7 +438,7 @@ export function SliceSettingsModal({
             </div>
           </div>
           <p className={classes.note}>
-            Step a limit below 1 to switch it off.
+            Step a limit down to 0 to switch it off.
           </p>
 
           {!isDisabled("minAlphaWormholes") && (

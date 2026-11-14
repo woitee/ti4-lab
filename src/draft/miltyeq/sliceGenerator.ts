@@ -8,6 +8,7 @@ import {
   isAlpha,
   isBeta,
   isLegendary,
+  planetCountInRange,
 } from "../helpers/sliceGeneration";
 import { systemData } from "~/data/systemData";
 import { generateEmptyMap, optimalStatsForSystems } from "~/utils/map";
@@ -142,6 +143,8 @@ const validateSlice = (slice: SystemIds, config: SliceGenerationConfig) => {
     return false;
   if (maxSliceValue !== undefined && totalOptimal > maxSliceValue) return false;
   if (minSliceValue !== undefined && totalOptimal < minSliceValue) return false;
+  if (!planetCountInRange(systems, config.minPlanets, config.maxPlanets))
+    return false;
 
   return true;
 };

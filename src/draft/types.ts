@@ -48,6 +48,8 @@ export type SliceGenerationConfig = {
   maxLegendaries?: number;
   maxSliceValue?: number;
   minSliceValue?: number;
+  minPlanets?: number;
+  maxPlanets?: number;
   minOptimalInfluence?: number;
   minOptimalResources?: number;
 

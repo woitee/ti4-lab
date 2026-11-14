@@ -123,6 +123,8 @@ function tryGenerateMap(
   // Slice value constraints from config, with fallback defaults
   const minSliceValue = sliceGenConfig?.minSliceValue ?? 4;
   const maxSliceValue = sliceGenConfig?.maxSliceValue ?? 10;
+  const minPlanetsPerSlice = sliceGenConfig?.minPlanets ?? 2;
+  const maxPlanetsPerSlice = sliceGenConfig?.maxPlanets ?? 5;
 
   // a bit hacky, but works for now
   // this changes between heisen and heisen8p
@@ -392,8 +394,8 @@ function tryGenerateMap(
     if (
       minTotalSpend < minSliceValue ||
       maxTotalSpend > maxSliceValue ||
-      minPlanets < 2 ||
-      maxPlanets > 5 ||
+      minPlanets < minPlanetsPerSlice ||
+      maxPlanets > maxPlanetsPerSlice ||
       redTileCount < MIN_RED_TILES ||
       mapStats.totalLegendary > 4 ||
       minCoreSpend < CORE_SLICE_MIN_OPTIMAL ||

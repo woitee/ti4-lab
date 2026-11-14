@@ -86,6 +86,18 @@ export const isBeta = (system: System) => system.wormholes.includes("BETA");
 export const isLegendary = (system: System) =>
   !!system.planets.find((p) => p.legendary);
 
+/** Whether a slice's total planet count is within the (optional) limits. */
+export const planetCountInRange = (
+  systems: System[],
+  minPlanets: number | undefined,
+  maxPlanets: number | undefined,
+) => {
+  const planets = systems.reduce((sum, s) => sum + s.planets.length, 0);
+  if (minPlanets !== undefined && planets < minPlanets) return false;
+  if (maxPlanets !== undefined && planets > maxPlanets) return false;
+  return true;
+};
+
 export function filterTieredSystems(
   tieredSystems: TieredSystems,
   filter: (system: System) => boolean,
