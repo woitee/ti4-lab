@@ -17,3 +17,24 @@
 .links button:focus-visible { outline: 2px solid var(--ion); outline-offset: -2px; }
 .image { display: block; max-width: 100%; max-height: 500px; margin: 0 auto; object-fit: contain; }
 .compact { display: inline-flex; gap: 2px; flex: none; }
+.summary {
+  margin-top: var(--space-2);
+  padding: 10px 12px;
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--gold-line);
+  background: var(--hull-raised);
+  font-family: var(--font);
+}
+.summaryHead { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.summaryLabel {
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.synergy { display: inline-flex; align-items: center; gap: 5px; }
+.techDot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; }
+.summaryName { margin-top: 2px; color: var(--text); font-size: 15px; font-weight: 600; }
+.summaryText { margin: 6px 0 0; color: var(--text); font-size: 13px; line-height: 1.45; }
+.summaryNote { margin: 6px 0 0; color: var(--text-faint); font-size: 12px; font-style: italic; }

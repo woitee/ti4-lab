@@ -4,6 +4,8 @@ import { Grid, IconButton, Modal, Stack, Text, useDisclosure } from "~/ui";
 import { useDraft } from "~/draftStore";
 import { mahactKingReferences } from "~/data/mahactKingReferences";
 import { MahactKingReference } from "./MahactKingReference";
+import { factionSummaries } from "~/data/factionSummaries";
+import { FactionSummary } from "./FactionSummary";
 import classes from "./FactionHelpInfo.module.css";
 
 type Props = {
@@ -21,6 +23,7 @@ export function FactionHelpInfo({ faction, compact = false }: Props) {
   const showMonumentImage =
     !!showMonumentImagesInFactionInfo && !!faction.monument;
   const kingReference = mahactKingReferences[faction.id];
+  const summary = factionSummaries[faction.id];
 
   return (
     <>
@@ -64,6 +67,7 @@ export function FactionHelpInfo({ faction, compact = false }: Props) {
                 src={`/factioncards/${faction.id}.png`}
                 alt={`${faction.name} faction card`}
               />
+              {summary && <FactionSummary summary={summary} />}
             </Stack>
             {showMonumentImage && (
               <Stack gap={2}>
