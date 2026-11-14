@@ -29,6 +29,7 @@ import {
 } from "~/stats";
 import { systemsInSlice } from "~/utils/slice";
 import { draftConfig } from "~/draft/draftConfig";
+import { formatSliceValue } from "~/stats";
 
 export async function generateDraftSlicesImage(
   draft: Draft,
@@ -330,7 +331,7 @@ function drawSlice(
   ctx.font = "26px Quantico, sans-serif";
 
   ctx.fillStyle = "#fcc419";
-  const svText = `SV: ${sliceValue % 1 === 0 ? sliceValue : sliceValue.toFixed(1)}`;
+  const svText = `SV: ${formatSliceValue(sliceValue)}`;
   ctx.fillText(svText, x + 15, y + 55);
 
   ctx.fillStyle = "#51cf66";

@@ -6,6 +6,7 @@ import { systemsInSlice } from "~/utils/slice";
 import { useSliceValue } from "~/hooks/useSliceValue";
 import { PlayerHex, Table, ValuePill } from "~/ui";
 import classes from "./SlicesTable.module.css";
+import { formatSliceValue } from "~/stats";
 
 export type SliceOwner = { name: string; color: string; letter?: string };
 
@@ -39,7 +40,7 @@ function SliceRow({ slice, isDrafted, owner }: { slice: Slice; isDrafted: boolea
         </span>
       </Table.Td>
       <Table.Td numeric className={classes.sv}>
-        {sliceValue % 1 === 0 ? sliceValue : sliceValue.toFixed(1)}
+        {formatSliceValue(sliceValue)}
       </Table.Td>
       <Table.Td>
         <ValuePill

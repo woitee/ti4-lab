@@ -3,6 +3,7 @@ import { SliceValuePopover } from "../../Slice/SliceValuePopover";
 import type { SliceStats } from "~/mapgen/utils/sliceScoring";
 import { speakerOrdinal } from "~/utils/map";
 import classes from "./HomeTileContent.module.css";
+import { formatSliceValue } from "~/stats";
 
 type Props = {
   seat?: number;
@@ -22,7 +23,7 @@ export function SliceStatsContent({ seat, sliceValue, sliceStats, coreSliceData,
       {seat !== undefined && <p className={classes.label}>{speakerOrdinal(seat + 1)}</p>}
       {sliceValue !== undefined && (
         <div className={classes.row}>
-          <p className={classes.value}>{sliceValue.toFixed(1)}</p>
+          <p className={classes.value}>{formatSliceValue(sliceValue)}</p>
           {coreSliceData && <SliceValuePopover breakdown={coreSliceData.breakdown} title="Seat value" variant="dark" />}
         </div>
       )}

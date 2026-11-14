@@ -8,6 +8,7 @@ import { FactionHelpInfo } from "~/routes/draft/$id/-components/FactionHelpInfo"
 import { playerColorOf, playerLetter, speakerOrdinal } from "./draftOrderUtils";
 import { PickToken } from "./PickToken";
 import classes from "./FinalizedDraft.module.css";
+import { formatSliceValue } from "~/stats";
 
 type Props = {
   player: HydratedPlayer;
@@ -73,7 +74,7 @@ function SliceNumbers({ slice }: { slice: Slice }) {
   return (
     <div className={classes.numbers}>
       <span className={classes.sv} title={`Slice value of ${slice.name}`}>
-        <b>{sliceValue % 1 === 0 ? sliceValue : sliceValue.toFixed(1)}</b>
+        <b>{formatSliceValue(sliceValue)}</b>
         <small>SV</small>
       </span>
       <ValuePill

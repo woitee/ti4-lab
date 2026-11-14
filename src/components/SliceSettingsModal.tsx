@@ -132,7 +132,7 @@ function WormholePositions({
 }
 
 /** Starting point when a planet limit is switched on in formats without a default. */
-const PLANETS_FALLBACK = { min: 3, max: 6 };
+const PLANETS_FALLBACK = { min: 4, max: 5 };
 
 type Props = {
   opened: boolean;

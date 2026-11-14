@@ -1,6 +1,10 @@
 import { draftConfig } from "~/draft";
 import { MAPS } from "~/routes/draft/prechoice/-maps";
-import { calculateSliceValue, draftSliceValueConfig } from "~/stats";
+import {
+  calculateSliceValue,
+  draftSliceValueConfig,
+  formatSliceValue,
+} from "~/stats";
 import type { DraftType, Slice, TechSpecialty, Wormhole } from "~/types";
 import { optimalStatsForSystems, techSpecialtiesForSystems } from "~/utils/map";
 import { systemsInSlice } from "~/utils/slice";
@@ -155,6 +159,6 @@ export function sliceSetStats(set: HubSliceSet): SliceSetStats {
 }
 
 export function formatValue(value: number) {
-  return value % 1 === 0 ? String(value) : value.toFixed(1);
+  return formatSliceValue(value);
 }
 

@@ -261,6 +261,10 @@ function evaluateSliceSystems(
   };
 }
 
+/** A slice value for display: up to 2 decimals (10.75, 10.5, 10). */
+export const formatSliceValue = (value: number) =>
+  String(Math.round(value * 100) / 100);
+
 export function calculateSliceValue(
   sliceSystems: System[],
   config: Partial<SliceValueConfig> = {},

@@ -9,6 +9,7 @@ import { PlayerHex, cx } from "~/ui";
 import { playerColorOf, playerLetter, shortFactionName, speakerOrdinal } from "./draftOrderUtils";
 import classes from "./MidDraftSummary.module.css";
 import { PickToken, sliceName } from "./PickToken";
+import { formatSliceValue } from "~/stats";
 
 /** One card per player with a slot for each thing they pick. Empty slots are dashed. */
 export function MidDraftSummary() {
@@ -77,7 +78,7 @@ function Slot(props: Omit<React.ComponentProps<typeof PickToken>, "variant" | "c
 function SliceSlot({ slice }: { slice: Slice }) {
   const sliceValue = useSliceValue(slice);
   const optimal = optimalStatsForSystems(systemsInSlice(slice));
-  const sv = sliceValue % 1 === 0 ? sliceValue : sliceValue.toFixed(1);
+  const sv = formatSliceValue(sliceValue);
   return (
     <Slot
       kind="slice"

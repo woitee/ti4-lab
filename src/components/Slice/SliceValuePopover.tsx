@@ -4,6 +4,7 @@ import { IconInfoCircleFilled } from "@tabler/icons-react";
 import { Slice } from "~/types";
 import { useSliceValueBreakdown } from "~/hooks/useSliceValueBreakdown";
 import type { SliceValueBreakdown } from "~/stats";
+import { formatSliceValue } from "~/stats";
 
 type Props = {
   /** Shown inside the trigger before the icon (e.g. "SV 12.8") so the whole value is the hover target. */
@@ -16,7 +17,7 @@ type Props = {
 };
 
 function formatValue(value: number, showSign = false): string {
-  const formatted = value % 1 === 0 ? value.toString() : value.toFixed(1);
+  const formatted = formatSliceValue(value);
   if (showSign && value > 0) return `+${formatted}`;
   if (showSign && value < 0) return formatted; // negative already has sign
   return formatted;

@@ -4,6 +4,7 @@ import type { CoreSliceData } from "~/hooks/useCoreSliceValues";
 import { SliceValuePopover } from "../../Slice/SliceValuePopover";
 import { speakerOrdinal } from "~/utils/map";
 import classes from "./HomeTileContent.module.css";
+import { formatSliceValue } from "~/stats";
 
 type Props = {
   seat?: number;
@@ -27,7 +28,7 @@ export function EmptySeatContent({ seat, coreSliceData, selectable, selected, on
       {!draftSpeaker && hydrated && seat !== undefined && <p className={classes.seat}>{speakerOrdinal(seat + 1)}</p>}
       {coreSliceData && (
         <div className={classes.row}>
-          <p className={classes.value}>{coreSliceData.value.toFixed(1)}</p>
+          <p className={classes.value}>{formatSliceValue(coreSliceData.value)}</p>
           <SliceValuePopover breakdown={coreSliceData.breakdown} title="Seat value" variant="dark" />
         </div>
       )}

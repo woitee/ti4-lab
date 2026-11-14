@@ -8,6 +8,7 @@ import { SliceFeatures } from "./SliceFeatures";
 import { SliceValuePopover } from "./SliceValuePopover";
 import { DraftConfig } from "~/draft";
 import classes from "./Slice.module.css";
+import { formatSliceValue } from "~/stats";
 
 type Props = {
   id: string;
@@ -69,7 +70,7 @@ export function BaseSlice({
         <span className={classes.sv}>
           <SliceValuePopover slice={slice}>
             <small>SV</small>
-            <b>{sliceValue % 1 === 0 ? sliceValue : sliceValue.toFixed(1)}</b>
+            <b>{formatSliceValue(sliceValue)}</b>
           </SliceValuePopover>
         </span>
         <span className={classes.opt}>
