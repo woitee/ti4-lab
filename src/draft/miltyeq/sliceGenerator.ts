@@ -9,6 +9,7 @@ import {
   isBeta,
   isLegendary,
   planetCountInRange,
+  planetTraitsInLimit,
   wormholePositionsOk,
   wormholesPerSliceOk,
 } from "../helpers/sliceGeneration";
@@ -144,6 +145,7 @@ const validateSlice = (slice: SystemIds, config: SliceGenerationConfig) => {
   if (minSliceValue !== undefined && totalOptimal < minSliceValue) return false;
   if (!planetCountInRange(systems, config.minPlanets, config.maxPlanets))
     return false;
+  if (!planetTraitsInLimit(systems, config.maxPlanetsPerTrait)) return false;
   if (!wormholesPerSliceOk(systems, config.wormholesPerSlice)) return false;
   if (
     !wormholePositionsOk(

@@ -53,6 +53,8 @@ export type SliceGenerationConfig = {
   minSliceValue?: number;
   minPlanets?: number;
   maxPlanets?: number;
+  /** Most planets of any one trait (cultural/hazardous/industrial) in a slice. */
+  maxPlanetsPerTrait?: number;
   wormholesPerSlice?: WormholesPerSlice;
   /**
    * Per slice position (slice index order): where the wormhole required by

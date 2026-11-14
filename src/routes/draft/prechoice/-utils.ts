@@ -69,6 +69,7 @@ export const buildSliceGenerationConfig = (
     maxSliceValue,
     minPlanets: settings.minPlanets,
     maxPlanets: settings.maxPlanets,
+    maxPlanetsPerTrait: settings.maxPlanetsPerTrait,
     minOptimalInfluence: settings.minOptimalInfluence,
     minOptimalResources: settings.minOptimalResources,
     safePathToMecatol: settings.safePathToMecatol,

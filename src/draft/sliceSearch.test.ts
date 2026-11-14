@@ -1,4 +1,4 @@
-import { expect, test } from "vitest";
+import { describe, expect, test } from "vitest";
 import { draftConfig } from "~/draft/draftConfig";
 import { generateSlices as generateMiltySlices } from "~/draft/milty/sliceGenerator";
 import {
@@ -13,6 +13,7 @@ import {
 } from "~/draft/common/sliceSearch";
 import { miltySystemTiers } from "~/data/miltyTileTiers";
 import { factionSystems, systemData } from "~/data/systemData";
+import { planetTraitCounts } from "~/draft/helpers/sliceGeneration";
 import { buildSliceValueConfig, calculateSliceValue } from "~/stats";
 import { optimalStatsForSystems } from "~/utils/map";
 import { getSystemPool } from "~/utils/system";
@@ -306,3 +307,64 @@ test("Milty EQ reports a map that keeps failing its checks, and uses it on reque
   expect(anyway?.valid).toBe(false);
   expect(anyway?.slices).toHaveLength(6);
 }, 30_000);
+
+describe("max planets of one trait", () => {
+  const maxTrait = (slice: SystemIds) =>
+    Math.max(...planetTraitCounts(slice.map((id) => systemData[id])));
+
+  const generators = (extra: Partial<SliceGenerationConfig>) => ({
+    milty: () => generateMiltySlices(6, [...pool], miltyConfig(9, 13, extra)),
+    miltyeq: () =>
+      generateMiltyEqSlices(6, [...pool], {
+        ...miltyConfig(6, 10, extra),
+        minOptimalInfluence: 3,
+        minOptimalResources: 2,
+        mecatolPathSystemIndices: EQ_PATH,
+      }),
+    nucleus: () =>
+      generateHeisenMap(nucleusSettings({ ...extra }), [...pool])?.slices,
+  });
+
+  // Max 1 is too tight for Milty / Milty EQ slices (it fails with the reason).
+  test.each([
+    [2, ["milty", "miltyeq", "nucleus"]],
+    [1, ["nucleus"]],
+  ])("is respected (max %i): %s", (max, formats) => {
+    for (const [format, generate] of Object.entries(
+      generators({ maxPlanetsPerTrait: max }),
+    ).filter(([format]) => formats.includes(format))) {
+      for (let i = 0; i < 10; i++) {
+        takeSliceSearchFailure();
+        const slices = generate();
+        if (max === 1 && !slices) {
+          // Nucleus max 1 is tight (~98% succeed); a failure must say why.
+          expect(takeSliceSearchFailure()?.problems.join(" ")).toMatch(/of one trait/);
+          continue;
+        }
+        expect(slices, format).toHaveLength(6);
+        for (const slice of slices!) expect(maxTrait(slice), format).toBeLessThanOrEqual(max);
+      }
+    }
+  }, 60_000);
+
+  test("has no effect when off", () => {
+    // Without the limit, Milty slices regularly have 3+ planets of a trait.
+    const { milty } = generators({});
+    let over = 0;
+    for (let i = 0; i < 20; i++) {
+      over += milty()!.filter((slice) => maxTrait(slice) > 2).length;
+    }
+    expect(over).toBeGreaterThan(0);
+  }, 60_000);
+
+  test("an impossible limit names it in the failure", () => {
+    takeSliceSearchFailure();
+    // Milty slices have 3 blue tiles; with min 5 planets some trait repeats.
+    expect(
+      generateMiltySlices(6, [...pool], miltyConfig(9, 13, { maxPlanetsPerTrait: 1, minPlanets: 7 })),
+    ).toBeUndefined();
+    const failure = takeSliceSearchFailure()!;
+    expect(failure.problems.join(" ")).toMatch(/more than 1 planet of one trait/);
+    expect(describeSliceSearchFailure(failure).lines[0]).toMatch(/at most 1 planet of one trait/);
+  }, 30_000);
+});

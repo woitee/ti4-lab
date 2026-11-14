@@ -33,6 +33,8 @@ import {
   isBeta,
   isLegendary,
   planetCountInRange,
+  planetTraitCounts,
+  planetTraitsInLimit,
   wormholePositionsOk,
   wormholesPerSliceOk,
 } from "../helpers/sliceGeneration";
@@ -77,6 +79,8 @@ export type SliceLimits = {
   minResources?: number;
   minPlanets?: number;
   maxPlanets?: number;
+  /** Most planets of any one trait in a slice. */
+  maxPlanetsPerTrait?: number;
   wormholesPerSlice?: WormholesPerSlice;
   wormholePositions?: boolean[];
   /** At most one alpha, one beta and one legendary in a slice. */
@@ -132,6 +136,7 @@ export type SliceSearchFailure = {
     | "minResources"
     | "minPlanets"
     | "maxPlanets"
+    | "maxPlanetsPerTrait"
   >;
   /** What the closest set still gets wrong, one short sentence each. */
   problems: string[];
@@ -177,6 +182,7 @@ export function limitsFromConfig(
     minResources: config.minOptimalResources || undefined,
     minPlanets: config.minPlanets,
     maxPlanets: config.maxPlanets,
+    maxPlanetsPerTrait: config.maxPlanetsPerTrait,
     wormholesPerSlice: config.wormholesPerSlice,
     wormholePositions: config.wormholePositions,
     valueModifiers: config.sliceValueModifiers,
@@ -211,6 +217,7 @@ export function sliceMeetsLimits(
     (!limits.minResources ||
       optimal.resources + optimal.flex >= limits.minResources) &&
     planetCountInRange(systems, limits.minPlanets, limits.maxPlanets) &&
+    planetTraitsInLimit(systems, limits.maxPlanetsPerTrait) &&
     wormholesPerSliceOk(systems, limits.wormholesPerSlice) &&
     wormholePositionsOk(slice, limits.wormholePositions, limits.wormholesPerSlice)
   );
@@ -226,6 +233,7 @@ type TileInfo = {
   influence: number; // optimal influence + flex
   resources: number; // optimal resources + flex
   planets: number;
+  traits: number[]; // planets per trait (cultural, hazardous, industrial)
   alpha: boolean;
   beta: boolean;
   legendary: boolean;
@@ -333,6 +341,7 @@ class Search {
       influence: flexInf,
       resources: flexRes,
       planets: s.planets.length,
+      traits: planetTraitCounts([s]),
       alpha: isAlpha(s),
       beta: isBeta(s),
       legendary: isLegendary(s),
@@ -387,6 +396,12 @@ class Search {
     if (L.minResources) base += Math.max(0, L.minResources - resources);
     const planets = infos.reduce((a, t) => a + t.planets, 0);
     base += W.planets * distanceToRange(planets, L.minPlanets, L.maxPlanets);
+    if (L.maxPlanetsPerTrait !== undefined) {
+      for (let trait = 0; trait < 3; trait++) {
+        const n = infos.reduce((a, t) => a + t.traits[trait], 0);
+        base += W.planets * Math.max(0, n - L.maxPlanetsPerTrait);
+      }
+    }
     const wormholes = infos.reduce((a, t) => a + t.wormholes, 0);
     const mode = L.wormholesPerSlice;
     if (mode === "atLeastOne") base += W.wormholes * Math.max(0, 1 - wormholes);
@@ -751,6 +766,12 @@ class Search {
     const manyPlanets = planets.filter((p) => L.maxPlanets !== undefined && p > L.maxPlanets).length;
     if (fewPlanets) problems.push(n(fewPlanets, `with fewer than ${L.minPlanets} planets`));
     if (manyPlanets) problems.push(n(manyPlanets, `with more than ${L.maxPlanets} planets`));
+    if (L.maxPlanetsPerTrait !== undefined) {
+      const c = infos.filter((s) =>
+        [0, 1, 2].some((trait) => sum(s, (t) => t.traits[trait]) > L.maxPlanetsPerTrait!),
+      ).length;
+      if (c) problems.push(n(c, `with more than ${plural(L.maxPlanetsPerTrait, "planet")} of one trait`));
+    }
     const wormholes = infos.map((s) => sum(s, (t) => t.wormholes));
     if (L.wormholesPerSlice === "atLeastOne" || L.wormholesPerSlice === "exactlyOne") {
       const none = wormholes.filter((w) => w === 0).length;
@@ -812,10 +833,11 @@ class Search {
 }
 
 function failureBase(spec: SliceSearchSpec): SliceSearchFailure {
-  const { minValue, maxValue, minInfluence, minResources, minPlanets, maxPlanets } = spec.limits;
+  const { minValue, maxValue, minInfluence, minResources, minPlanets, maxPlanets, maxPlanetsPerTrait } =
+    spec.limits;
   return {
     sliceCount: spec.sliceCount,
-    limits: { minValue, maxValue, minInfluence, minResources, minPlanets, maxPlanets },
+    limits: { minValue, maxValue, minInfluence, minResources, minPlanets, maxPlanets, maxPlanetsPerTrait },
     problems: [],
   };
 }
@@ -942,13 +964,16 @@ export function describeSliceSearchFailure(failure: SliceSearchFailure): {
           : `at most ${formatSliceValue(limits.maxValue!)}`;
     wanted.push(`value ${range}`);
   }
+  if (limits.maxPlanetsPerTrait !== undefined) {
+    wanted.push(`at most ${plural(limits.maxPlanetsPerTrait, "planet")} of one trait`);
+  }
   if (limits.minInfluence || limits.minResources) {
     wanted.push(
       `at least ${limits.minInfluence ?? 0} influence / ${limits.minResources ?? 0} resources`,
     );
   }
   const lines = [
-    `Couldn't find ${sliceCount} slices${wanted.length ? ` with ${wanted.join(" and ")}` : ""} that meet all slice settings.`,
+    `Couldn't find ${sliceCount} slices${wanted.length ? ` with ${wanted.join(", ")}` : ""} that meet all slice settings.`,
   ];
   if (failure.closestValues) {
     const [lo, hi] = failure.closestValues.map(formatSliceValue);

@@ -133,6 +133,8 @@ function WormholePositions({
 
 /** Starting point when a planet limit is switched on in formats without a default. */
 const PLANETS_FALLBACK = { min: 4, max: 5 };
+/** "Max planets of one trait" starts here when switched on. */
+const TRAIT_LIMIT_START = 2;
 
 type Props = {
   opened: boolean;
@@ -498,6 +500,22 @@ export function SliceSettingsModal({
                 onChange={handleSettingChange}
                 allowUndefined={defaults.maxPlanets === undefined}
                 defaultValue={defaults.maxPlanets ?? PLANETS_FALLBACK.max}
+              />
+            </div>
+          </div>
+          <div className={classes.field}>
+            <div className={classes.lbl}>
+              <b>Planets of one trait</b>
+              <small>Most cultural, hazardous or industrial planets per slice</small>
+            </div>
+            <div className={classes.range}>
+              <Count
+                label="Max planets of one trait"
+                property="maxPlanetsPerTrait"
+                value={s.maxPlanetsPerTrait}
+                onChange={handleSettingChange}
+                allowUndefined
+                defaultValue={TRAIT_LIMIT_START}
               />
             </div>
           </div>

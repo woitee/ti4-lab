@@ -10,6 +10,11 @@ export interface SliceGenerationSettings {
   /** Planets per slice (all systems in the slice); undefined = no limit. */
   minPlanets?: number;
   maxPlanets?: number;
+  /**
+   * Most planets of any one trait (cultural, hazardous, industrial) in a
+   * slice; undefined = no limit. Planets with two traits count for both.
+   */
+  maxPlanetsPerTrait?: number;
   minOptimalInfluence?: number;
   minOptimalResources?: number;
 

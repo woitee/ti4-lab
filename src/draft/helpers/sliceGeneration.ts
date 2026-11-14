@@ -4,7 +4,7 @@
  * Has been adapted to 'typescript' and minor modifications to better fit
  * with the aesthetic of this project, but largely unchanged.
  */
-import { SystemIds, System, SystemId } from "~/types";
+import { PlanetTrait, SystemIds, System, SystemId } from "~/types";
 import { systemData } from "~/data/systemData";
 import { ChoosableTier, TieredSystems, WormholesPerSlice } from "../types";
 import { shuffle } from "./randomization";
@@ -25,6 +25,23 @@ export const planetCountInRange = (
   if (maxPlanets !== undefined && planets > maxPlanets) return false;
   return true;
 };
+
+const TRAITS: PlanetTrait[] = ["CULTURAL", "HAZARDOUS", "INDUSTRIAL"];
+
+/**
+ * Planets of each trait (cultural, hazardous, industrial) in the systems.
+ * A planet with two traits counts for both; planets without one don't count.
+ */
+export const planetTraitCounts = (systems: System[]) =>
+  TRAITS.map(
+    (trait) =>
+      systems.flatMap((s) => s.planets).filter((p) => p.trait?.includes(trait))
+        .length,
+  );
+
+/** Whether no trait has more than `max` planets (undefined = no limit). */
+export const planetTraitsInLimit = (systems: System[], max: number | undefined) =>
+  max === undefined || planetTraitCounts(systems).every((n) => n <= max);
 
 /** Alpha and beta wormholes in a system; ones inside a supernova don't count. */
 export const countedWormholes = (system: System) =>
