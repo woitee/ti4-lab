@@ -10,8 +10,10 @@ import {
 import { calculateTier, getTieredSystems } from "../tieredSystems";
 import {
   chooseRequiredSystems,
+  countedWormholes,
   fillSlicesWithRemainingTiles,
   fillSlicesWithRequiredTiles,
+  wormholesPerSliceOk,
 } from "../helpers/sliceGeneration";
 import { PlanetTrait, SystemIds, SystemId, DraftSettings } from "~/types";
 import { generateEmptyMap } from "~/utils/map";
@@ -125,6 +127,7 @@ function tryGenerateMap(
   const maxSliceValue = sliceGenConfig?.maxSliceValue ?? 10;
   const minPlanetsPerSlice = sliceGenConfig?.minPlanets ?? 2;
   const maxPlanetsPerSlice = sliceGenConfig?.maxPlanets ?? 5;
+  const wormholesPerSlice = sliceGenConfig?.wormholesPerSlice;
 
   // a bit hacky, but works for now
   // this changes between heisen and heisen8p
@@ -170,15 +173,29 @@ function tryGenerateMap(
   const { numAlphas, numBetas } = weightedChoice(MAP_WORMHOLES);
   const numLegendaries = weightedChoice(MAP_LEGENDARIES);
 
+  // With "wormholes per slice" on, keep one wormhole per slice off the map.
+  const reservedForSlices = sliceWormholeCandidates(
+    systemPool,
+    wormholesPerSlice,
+  ).slice(0, sliceCount);
+
   // --------------------------------------------------
   // Step 1: Distribute alphas/betas/legendaries on map.
   // --------------------------------------------------
   const alphas = shuffle(
-    systemPool.filter((id) => systemData[id].wormholes.includes("ALPHA")),
+    systemPool.filter(
+      (id) =>
+        systemData[id].wormholes.includes("ALPHA") &&
+        !reservedForSlices.includes(id),
+    ),
   );
 
   const betas = shuffle(
-    systemPool.filter((id) => systemData[id].wormholes.includes("BETA")),
+    systemPool.filter(
+      (id) =>
+        systemData[id].wormholes.includes("BETA") &&
+        !reservedForSlices.includes(id),
+    ),
   );
 
   const legendaries = shuffle(
@@ -194,8 +211,16 @@ function tryGenerateMap(
     })),
   );
 
-  const alphaSpots = distributeByDistance(tileLocations, alphas, numAlphas);
-  const betaSpots = distributeByDistance(tileLocations, betas, numBetas);
+  const alphaSpots = distributeByDistance(
+    tileLocations,
+    alphas,
+    Math.min(numAlphas, alphas.length),
+  );
+  const betaSpots = distributeByDistance(
+    tileLocations,
+    betas,
+    Math.min(numBetas, betas.length),
+  );
   const legendarySpots = distributeByDistance(
     tileLocations,
     legendaries,
@@ -233,6 +258,7 @@ function tryGenerateMap(
     numAlphas: remainingAlphas,
     numBetas: remainingBetas,
     minLegendaries: remainingLegendaries,
+    wormholesPerSlice,
   });
   // promote the chosen slice systems.
   chosenSliceSystems = slices.flat(1);
@@ -344,6 +370,18 @@ function tryGenerateMap(
   // ------------------------------------------------
   // Step 6: Validate map and core slice balance
   // ------------------------------------------------
+  if (
+    validate &&
+    !slices.every((slice) =>
+      wormholesPerSliceOk(
+        slice.map((id) => systemData[id]),
+        wormholesPerSlice,
+      ),
+    )
+  ) {
+    return undefined;
+  }
+
   if (settings.type === "heisen" && validate) {
     // Calculate min/max planets across all slices
     const planetCounts = slices.map((slice) =>
@@ -708,22 +746,39 @@ export function generateSlices(
     const tierValues = shuffle(weightedChoice(SLICE_CHOICES));
     tieredSlices.push(tierValues);
   }
+  const slices: SystemIds[] = Array.from({ length: sliceCount }, () => []);
+
+  // "Wormholes per slice": put one counted wormhole into each slice first.
+  // For "exactly one", the other counted wormholes stay out of the slices.
+  const candidates = sliceWormholeCandidates(
+    availableSystems,
+    config.wormholesPerSlice,
+  );
+  const perSliceWormholes = candidates.slice(0, sliceCount);
+  perSliceWormholes.forEach((id, sliceIdx) => {
+    const tier = calculateTier(systemData[id]) as ChoosableTier;
+    const tileIdx = tieredSlices[sliceIdx].indexOf(tier);
+    tieredSlices[sliceIdx][tileIdx === -1 ? 0 : tileIdx] = "resolved";
+    slices[sliceIdx].push(id);
+  });
+  const slicePool = availableSystems.filter(
+    (id) =>
+      !perSliceWormholes.includes(id) &&
+      (config.wormholesPerSlice !== "exactlyOne" ||
+        countedWormholes(systemData[id]) === 0),
+  );
 
   // Enforce a minimum number of wormholes and legendary planets
-  const { chosenTiles, remainingTiles } = chooseRequiredSystems(
-    availableSystems,
-    {
-      minAlphaWormholes: config.numAlphas,
-      minBetaWormholes: config.numBetas,
-      minLegendary: config.minLegendaries ?? 0,
-    },
-  );
+  const { chosenTiles, remainingTiles } = chooseRequiredSystems(slicePool, {
+    minAlphaWormholes: config.numAlphas,
+    minBetaWormholes: config.numBetas,
+    minLegendary: config.minLegendaries ?? 0,
+  });
   const tieredChosenTiles = getTieredSystems(chosenTiles);
   const tieredRemainingTiles = getTieredSystems(remainingTiles);
 
   // distirbute the wormholes/legendaries in round robin fashion
   // on the slices.
-  const slices: SystemIds[] = Array.from({ length: sliceCount }, () => []);
   fillSlicesWithRequiredTiles(tieredSlices, tieredChosenTiles, slices);
 
   // fill slices with remaining tiles, respecting the 'tier' requirements
@@ -737,6 +792,24 @@ export function generateSlices(
 
   // shuffle the slices
   return slices.map((slice) => shuffle(slice));
+}
+
+/**
+ * Shuffled systems that can be a slice's wormhole under the "wormholes per
+ * slice" setting (none when it is off).
+ */
+function sliceWormholeCandidates(
+  systems: SystemId[],
+  mode: SliceGenerationConfig["wormholesPerSlice"],
+) {
+  if (!mode || mode === "any") return [];
+  const count = mode === "exactlyOne" ? 1 : Infinity;
+  return shuffle(
+    systems.filter((id) => {
+      const n = countedWormholes(systemData[id]);
+      return n >= 1 && n <= count;
+    }),
+  );
 }
 
 type Location = { mapIdx: number; position: { x: number; y: number } };

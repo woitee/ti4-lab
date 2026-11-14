@@ -197,6 +197,15 @@
   margin-right: auto;
 }
 
+.miniWide > .wtxt {
+  margin-right: auto;
+}
+
+.whPair {
+  display: inline-flex;
+  gap: 2px;
+}
+
 .between {
   display: flex;
   flex-wrap: wrap;

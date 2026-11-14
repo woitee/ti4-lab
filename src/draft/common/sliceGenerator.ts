@@ -1,6 +1,7 @@
 import { DraftSettings, FactionId, Map, SystemId, SystemIds } from "~/types";
 import {
   groupSystemsByTier,
+  poolFitsWormholesPerSlice,
   separateAnomalies,
   shuffleTieredSystems,
 } from "../helpers/sliceGeneration";
@@ -336,7 +337,13 @@ export function coreGenerateSlices({
         continue;
       }
 
-      if (validateSystems(t_tieredSystems, config)) {
+      const chosen = Object.values(t_tieredSystems)
+        .flat()
+        .map((id) => systemData[id]);
+      if (
+        validateSystems(t_tieredSystems, config) &&
+        poolFitsWormholesPerSlice(chosen, sliceCount, config.wormholesPerSlice)
+      ) {
         tieredSystems = t_tieredSystems;
         break;
       }

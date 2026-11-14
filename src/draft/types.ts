@@ -41,6 +41,9 @@ export type DraftType =
 
 export type MapSize = 3 | 4;
 
+/** Wormholes required in every slice (alpha/beta, not in a supernova). */
+export type WormholesPerSlice = "any" | "atLeastOne" | "exactlyOne";
+
 export type SliceGenerationConfig = {
   numAlphas?: number;
   numBetas?: number;
@@ -50,6 +53,7 @@ export type SliceGenerationConfig = {
   minSliceValue?: number;
   minPlanets?: number;
   maxPlanets?: number;
+  wormholesPerSlice?: WormholesPerSlice;
   minOptimalInfluence?: number;
   minOptimalResources?: number;
 

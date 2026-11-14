@@ -5,6 +5,7 @@ import {
   Modal,
   NumberField,
   NumberStepper,
+  Segmented,
   Tooltip,
   cx,
 } from "~/ui";
@@ -13,6 +14,7 @@ import {
   type SliceGenerationSettings,
   type SliceSettingsFormatType,
 } from "~/draft/sliceSettings";
+import type { WormholesPerSlice } from "~/draft/types";
 import classes from "./SliceSettingsModal.module.css";
 
 // Fields to disable (hide) per format type
@@ -40,6 +42,15 @@ const FORMAT_NAMES: Record<SliceSettingsFormatType, string> = {
   miltyeq: "Milty EQ",
   heisen: "Nucleus",
 };
+
+const WORMHOLES_PER_SLICE_OPTIONS: {
+  value: WormholesPerSlice;
+  label: string;
+}[] = [
+  { value: "any", label: "Any" },
+  { value: "atLeastOne", label: "At least 1" },
+  { value: "exactlyOne", label: "Exactly 1" },
+];
 
 /** Starting point when a planet limit is switched on in formats without a default. */
 const PLANETS_FALLBACK = { min: 3, max: 6 };
@@ -441,10 +452,10 @@ export function SliceSettingsModal({
             Step a limit down to 0 to switch it off.
           </p>
 
-          {!isDisabled("minAlphaWormholes") && (
-            <>
-              <h4>On the map</h4>
-              <div className={classes.mapGrid}>
+          <h4>On the map</h4>
+          <div className={classes.mapGrid}>
+            {!isDisabled("minAlphaWormholes") && (
+              <>
                 <div className={classes.mini}>
                   <span
                     className={classes.wh}
@@ -500,9 +511,38 @@ export function SliceSettingsModal({
                     />
                   </span>
                 </div>
-              </div>
-            </>
-          )}
+              </>
+            )}
+            <div className={cx(classes.mini, classes.miniWide)}>
+              <span className={classes.whPair}>
+                <span
+                  className={classes.wh}
+                  style={{ "--wh": "var(--wormhole-alpha)" } as React.CSSProperties}
+                >
+                  α
+                </span>
+                <span
+                  className={classes.wh}
+                  style={{ "--wh": "var(--wormhole-beta)" } as React.CSSProperties}
+                >
+                  β
+                </span>
+              </span>
+              <span className={classes.wtxt}>
+                <b>Wormholes per slice</b>
+                <small>Alpha and beta, not in a supernova</small>
+              </span>
+              <Segmented
+                size="sm"
+                label="Wormholes per slice"
+                value={s.wormholesPerSlice ?? "any"}
+                onChange={(v) =>
+                  setLocalSettings((prev) => ({ ...prev, wormholesPerSlice: v }))
+                }
+                options={WORMHOLES_PER_SLICE_OPTIONS}
+              />
+            </div>
+          </div>
 
           {!isDisabled("safePathToMecatol") && (
             <>

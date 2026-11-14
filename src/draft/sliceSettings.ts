@@ -1,5 +1,6 @@
 // Slice generation settings: types and per-format defaults. Pure data, no UI, so the server-side generators can import it.
 import { DEFAULT_SLICE_VALUE_MODIFIERS } from "~/stats";
+import type { WormholesPerSlice } from "~/draft/types";
 
 export type SliceSettingsFormatType = "milty" | "miltyeq" | "heisen";
 
@@ -19,6 +20,8 @@ export interface SliceGenerationSettings {
   minBetaWormholes: number;
   minLegendaries: number;
   maxLegendaries?: number;
+  /** Undefined = "any". */
+  wormholesPerSlice?: WormholesPerSlice;
 
   // Slice value modifiers
   entropicScarValue: number;

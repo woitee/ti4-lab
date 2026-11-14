@@ -6,7 +6,12 @@
  */
 import { SystemIds, System, SystemId, Wormhole } from "~/types";
 import { systemData } from "~/data/systemData";
-import { ChoosableTier, TieredSlice, TieredSystems } from "../types";
+import {
+  ChoosableTier,
+  TieredSlice,
+  TieredSystems,
+  WormholesPerSlice,
+} from "../types";
 import { neighbors } from "../hex";
 import { shuffle, weightedChoice } from "./randomization";
 import {
@@ -96,6 +101,37 @@ export const planetCountInRange = (
   if (minPlanets !== undefined && planets < minPlanets) return false;
   if (maxPlanets !== undefined && planets > maxPlanets) return false;
   return true;
+};
+
+/** Alpha and beta wormholes in a system; ones inside a supernova don't count. */
+export const countedWormholes = (system: System) =>
+  system.anomalies.includes("SUPERNOVA")
+    ? 0
+    : system.wormholes.filter((w) => w === "ALPHA" || w === "BETA").length;
+
+/** Whether a slice meets the "wormholes per slice" setting. */
+export const wormholesPerSliceOk = (
+  systems: System[],
+  mode: WormholesPerSlice | undefined,
+) => {
+  if (!mode || mode === "any") return true;
+  const count = systems.reduce((sum, s) => sum + countedWormholes(s), 0);
+  return mode === "exactlyOne" ? count === 1 : count >= 1;
+};
+
+/**
+ * Whether the systems going into `sliceCount` slices hold enough counted
+ * wormholes for the "wormholes per slice" setting (exactly one per slice
+ * needs exactly `sliceCount` of them in total).
+ */
+export const poolFitsWormholesPerSlice = (
+  systems: System[],
+  sliceCount: number,
+  mode: WormholesPerSlice | undefined,
+) => {
+  if (!mode || mode === "any") return true;
+  const count = systems.reduce((sum, s) => sum + countedWormholes(s), 0);
+  return mode === "exactlyOne" ? count === sliceCount : count >= sliceCount;
 };
 
 export function filterTieredSystems(
