@@ -1,4 +1,5 @@
 import { ReactNode, type JSX } from "react";
+import { cx } from "~/ui/utils";
 import { hexSides, hexVertices } from "./hexUtils";
 import { AnomalyBorder } from "./AnomalyBorder";
 import { HexBorder } from "./HexBorder";
@@ -6,6 +7,7 @@ import { FactionId } from "~/types";
 import { FactionIcon } from "../icons/FactionIcon";
 import { HexFactionIndicator } from "./HexFactionIndicator";
 import { HyperlaneLine } from "./HyperlaneLine";
+import hitClasses from "./Hex.module.css";
 
 interface Props {
   id: string;
@@ -22,6 +24,8 @@ interface Props {
   faction?: FactionId;
   hyperlanes?: number[][];
   style?: React.CSSProperties;
+  /** Let pointer events fall through the whole hex (e.g. a hover overlay drawn on top of a tile). */
+  passThrough?: boolean;
 }
 
 export function Hex({
@@ -39,13 +43,16 @@ export function Hex({
   faction,
   hyperlanes,
   style = {},
+  passThrough = false,
 }: Props) {
   const points = hexVertices(radius);
   const pointsString = points.map((point) => `${point.x},${point.y}`).join(" ");
 
   return (
     <>
-      <div style={{ position: "absolute", ...style }}>
+      {/* The square boxes overlap neighbouring tiles' corners, so only the hexagon and the
+          content take pointer events; the rest falls through to the neighbour underneath. */}
+      <div className={hitClasses.box} style={{ position: "absolute", ...style }}>
         <svg
           width={2 * radius}
           height={2 * radius}
@@ -68,7 +75,11 @@ export function Hex({
             )}
           </defs>
 
-          <polygon points={pointsString} fill={color} className={colorClass} />
+          <polygon
+            points={pointsString}
+            fill={color}
+            className={cx(colorClass, !passThrough && hitClasses.hit)}
+          />
           {showBorder && (
             <HexBorder
               radius={radius}
@@ -130,6 +141,7 @@ export function Hex({
       </div>
 
       <div
+        className={cx(hitClasses.box, !passThrough && hitClasses.content)}
         style={{
           width: radius * 2,
           height: radius * 2,

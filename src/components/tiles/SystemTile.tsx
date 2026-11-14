@@ -10,6 +10,7 @@ import { MapContext } from "~/contexts/MapContext";
 import { LegendaryImage, hasLegendaryImage } from "../LegendaryImage";
 import { SystemId } from "../SystemId";
 import { systemData } from "~/data/systemData";
+import { AnomalyMarkers } from "../RulesPopover";
 
 import classes from "./Tiles.module.css";
 
@@ -63,6 +64,7 @@ export function RawSystemTile({ mapId, tile, hideValues = false, radius, disable
             radius={radius}
           />
         )}
+        {!disablePopover && <AnomalyMarkers anomalies={system.anomalies} radius={radius} />}
         <div
           style={{
             display: "flex",

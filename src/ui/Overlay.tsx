@@ -101,7 +101,7 @@ type PopoverProps = {
   /** Infotips: open on hover as well as press. */
   openOnHover?: boolean;
   opened?: boolean;
-  onOpenChange?: (open: boolean) => void;
+  onOpenChange?: (open: boolean, details: BasePopover.Root.ChangeEventDetails) => void;
   title?: ReactNode;
   className?: string;
   padding?: boolean;
@@ -109,7 +109,7 @@ type PopoverProps = {
 
 export function Popover({ trigger, children, side = "bottom", align = "center", width, openOnHover, opened, onOpenChange, title, className, padding = true }: PopoverProps) {
   return (
-    <BasePopover.Root open={opened} onOpenChange={onOpenChange ? (o) => onOpenChange(o) : undefined}>
+    <BasePopover.Root open={opened} onOpenChange={onOpenChange ? (o, d) => onOpenChange(o, d) : undefined}>
       <BasePopover.Trigger render={trigger} openOnHover={openOnHover} delay={120} closeDelay={80} nativeButton={typeof trigger.type === "string" ? trigger.type === "button" : true} />
       <BasePopover.Portal>
         <BasePopover.Positioner side={side} align={align} sideOffset={8} className={classes.positioner}>

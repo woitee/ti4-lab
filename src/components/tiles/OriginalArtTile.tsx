@@ -44,6 +44,7 @@ export function OriginalArtTile({ mapId, tile, children }: Props) {
           top: `${radius * 0.125}px`,
           left: `${radius * 0.125}px`,
           borderRadius: "50%",
+          pointerEvents: "auto",
         }}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}

@@ -5,7 +5,9 @@ import { TechIcon } from "../icons/TechIcon";
 import { LegendaryIcon } from "../icons/LegendaryIcon";
 import { useDraftUiSettings } from "~/draftUiSettings";
 import { TradeStation } from "../features/TradeStation";
-import { LegendaryPopover } from "./LegendaryPopover";
+import { TradeStationIcon } from "../icons/TradeStationIcon";
+import { RulesPopover, useRulesPopover } from "../RulesPopover";
+import { planetRules } from "~/data/tileRules";
 
 type Props = {
   planet: PlanetType;
@@ -66,7 +68,11 @@ export function Planet({
 
   const showBg = !hasLegendaryImage && !planet.tradeStation;
 
-  const content = (
+  const rules = disablePopover ? undefined : planetRules(planet);
+  const { open, onOpenChange, hoverProps } = useRulesPopover();
+  const markerIcon = planet.tradeStation ? <TradeStationIcon /> : planet.legendary ? <LegendaryIcon /> : null;
+
+  return (
     <div
       style={{
         background: showBg ? planetColor : undefined,
@@ -77,6 +83,8 @@ export function Planet({
         alignItems: "center",
         justifyContent: "center",
         position: "relative",
+        // Matches the old popover wrapper: no pointer interaction while dragging / in the finder.
+        pointerEvents: disablePopover && markerIcon ? "none" : undefined,
       }}
     >
       {planet.tradeStation && (
@@ -100,9 +108,22 @@ export function Planet({
           {planet.name}
         </PlanetName>
       )}
-      {planet.legendary && (
-        <div style={{ position: "absolute", bottom: -4, left: -14 }}>
-          <LegendaryIcon />
+      {markerIcon && (
+        // Legendary planets and space stations: the icon is the tap target for the rules popover.
+        <div style={{ position: "absolute", bottom: -4, left: -14, zIndex: 1 }}>
+          {rules ? (
+            <RulesPopover
+              entry={rules}
+              open={open}
+              onOpenChange={onOpenChange}
+              marker={markerIcon}
+              // Bigger hit area for touch without moving the icon.
+              markerStyle={{ padding: 8, margin: -8 }}
+              markerProps={hoverProps}
+            />
+          ) : (
+            markerIcon
+          )}
         </div>
       )}
 
@@ -112,19 +133,5 @@ export function Planet({
         </div>
       ))}
     </div>
-  );
-
-  return planet.legendary ||
-    planet.legendaryTitle ||
-    planet.legendaryDescription ? (
-    <LegendaryPopover
-      title={planet.legendaryTitle}
-      description={planet.legendaryDescription}
-      disabled={disablePopover}
-    >
-      {content}
-    </LegendaryPopover>
-  ) : (
-    content
   );
 }

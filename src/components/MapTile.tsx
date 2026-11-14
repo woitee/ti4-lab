@@ -245,6 +245,8 @@ function AbstractArtMapTile(props: Props) {
     tile.type !== "CLOSED" &&
     (hovered || tile.type === "OPEN" || isOver);
 
+  const overlayVisible = showOverlay && !isDragging && !isOver;
+
   const overlayColor = hovered
     ? "color-mix(in srgb, var(--ion) 45%, transparent)"
     : isOver
@@ -282,6 +284,7 @@ function AbstractArtMapTile(props: Props) {
         left: x + wOffset,
         top: y + hOffset,
         ...dragStyle,
+        ...(overlayVisible ? { cursor: "pointer" } : {}),
         ...cursorStyle,
       }}
       onMouseOver={() => setHovered(true)}
@@ -289,6 +292,9 @@ function AbstractArtMapTile(props: Props) {
       onFocus={() => setHovered(true)}
       onBlur={() => setHovered(false)}
       onClick={closeTileMode ? onSelect : undefined}
+      // The overlay lets pointer events through (so rules markers on the tile stay hoverable/tappable);
+      // a mouseup anywhere on the tile still opens the system picker, as it did on the overlay.
+      onMouseUp={overlayVisible ? onSelect : undefined}
       {...listeners}
       {...attributes}
     >
@@ -299,12 +305,13 @@ function AbstractArtMapTile(props: Props) {
         <ContributionBadge percentage={tileContribution.percentage} />
       )}
 
-      {showOverlay && !isDragging && !isOver && (
-        <div className="modify-tile-overlay" onMouseUp={onSelect}>
+      {overlayVisible && (
+        <div className="modify-tile-overlay">
           <Hex
             id={`${props.mapId}-${tile.idx}-overlay`}
             color={overlayColor}
             radius={radius}
+            passThrough
           >
             <div className="map-tile-tools">
               <button

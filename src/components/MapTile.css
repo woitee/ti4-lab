@@ -3,6 +3,8 @@
     top: 0;
     left: 0;
     z-index: 1;
+    /* Only the tools take pointer events; the tile underneath (and its rules markers) gets the rest. */
+    pointer-events: none;
 
     &:hover {
         cursor: pointer;
@@ -16,6 +18,9 @@
 
 .map-tile-button {
     outline: none;
+    /* Tile boxes are squares that overlap the neighbours' corners; only the hexagon and its
+       content (see Hex.module.css) take pointer events, so a click lands on the hex under it. */
+    pointer-events: none;
 }
 
 .map-tile-button:focus,
@@ -24,7 +29,7 @@
     outline: none;
 }
 
-.map-tile-tools { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.map-tile-tools { position: relative; z-index: 2; pointer-events: auto; display: flex; flex-direction: column; align-items: center; gap: 3px; }
 .map-tile-tool {
   display: grid;
   place-items: center;

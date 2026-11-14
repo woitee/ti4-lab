@@ -1,2 +1,6 @@
 .border { /*  */ stroke: var(--pal-dark-3) }
 :global([data-theme="light"]) .border { stroke: #c9d1df; }
+/* Hit-testing for Hex: see Hex.tsx. */
+.box { pointer-events: none; }
+.hit { pointer-events: auto; }
+.content > * { pointer-events: auto; }

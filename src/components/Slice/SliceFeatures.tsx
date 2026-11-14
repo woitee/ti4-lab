@@ -1,10 +1,9 @@
 import { techSpecialtiesForSystems } from "~/utils/map";
 import { TechIcon } from "../icons/TechIcon";
-import { LegendaryIcon } from "../icons/LegendaryIcon";
 import { Wormhole } from "../features/Wormhole";
 import { Slice } from "~/types";
 import { systemsInSlice } from "~/utils/slice";
-import { TradeStationIcon } from "~/components/icons/TradeStationIcon";
+import { PlanetRulesMarker } from "~/components/RulesPopover";
 
 type Props = {
   slice: Slice;
@@ -13,12 +12,8 @@ type Props = {
 export function SliceFeatures({ slice }: Props) {
   const systems = systemsInSlice(slice);
   const specialties = techSpecialtiesForSystems(systems);
-  const legendarySystems = systems.filter(
-    (s) => s.planets.filter((p) => p.legendary).length > 0,
-  );
-  const tradeStationsSystems = systems.filter(
-    (s) => s.planets.filter((p) => p.tradeStation).length > 0,
-  );
+  const legendaryPlanets = systems.flatMap((s) => s.planets.filter((p) => p.legendary));
+  const tradeStations = systems.flatMap((s) => s.planets.filter((p) => p.tradeStation));
   const wormholes = systems
     .filter((s) => s.wormholes.length > 0)
     .map((s) => s.wormholes)
@@ -29,11 +24,11 @@ export function SliceFeatures({ slice }: Props) {
       {specialties.map((tech, idx) => (
         <TechIcon key={idx} techSpecialty={tech} />
       ))}
-      {legendarySystems.map((s) => (
-        <LegendaryIcon key={s.id} />
+      {legendaryPlanets.map((p) => (
+        <PlanetRulesMarker key={p.name} planet={p} />
       ))}
-      {tradeStationsSystems.map((s) => (
-        <TradeStationIcon key={s.id} />
+      {tradeStations.map((p) => (
+        <PlanetRulesMarker key={p.name} planet={p} />
       ))}
       {wormholes.map((w, idx) => (
         <Wormhole key={idx} wormhole={w} size={28} fontSize={14} />
