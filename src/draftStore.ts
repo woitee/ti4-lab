@@ -35,6 +35,10 @@ import { shuffle } from "./draft/helpers/randomization";
 import { notify } from "~/ui/notify";
 import { coreRerollSlice, coreRerollMap } from "./draft/common/sliceGenerator";
 import {
+  describeSliceSearchFailure,
+  takeSliceSearchFailure,
+} from "./draft/common/sliceSearch";
+import {
   createTexasSeatAssignments,
   dealTexasFactionOptions,
 } from "./draft/texas/texasDraft";
@@ -584,6 +588,8 @@ export const draftStore = createStore<DraftV2State>()(
         integrations: DraftIntegrations,
       ) => {
         set(initialState);
+        // Clear any stale failure; /draft/new reads it if this fails.
+        takeSliceSearchFailure();
         const draft = buildInitialDraft(settings, players, integrations);
         if (!draft) return;
 
@@ -875,6 +881,7 @@ export const draftStore = createStore<DraftV2State>()(
       // randomization
       randomizeAll: () =>
         set(({ draft, systemPool, factionPool }) => {
+          takeSliceSearchFailure();
           const config = draftConfig[draft.settings.type];
           const minorFactionPool = getDraftableFactions(
             factionPool,
@@ -892,6 +899,8 @@ export const draftStore = createStore<DraftV2State>()(
             draft.presetMap = generated.presetMap;
             draft.slices = generated.slices;
             draft.slices = setSliceNames(draft.slices);
+          } else {
+            notifyGenerationFailure();
           }
         }),
 
@@ -969,6 +978,7 @@ export const draftStore = createStore<DraftV2State>()(
 
       randomizeSlices: () =>
         set(({ draft, systemPool, factionPool }) => {
+          takeSliceSearchFailure();
           const config = draftConfig[draft.settings.type];
           const usedIds = getUsedSystemIdsInMap(draft.presetMap);
           const availableSystems = systemPool.filter(
@@ -996,11 +1006,26 @@ export const draftStore = createStore<DraftV2State>()(
               draft.settings.sliceGenerationConfig?.sliceValueModifiers,
             );
             draft.slices = setSliceNames(draft.slices);
+          } else {
+            notifyGenerationFailure();
           }
         }),
     },
   })),
 );
+
+/** Toast explaining why slices couldn't be generated (from the slice search). */
+function notifyGenerationFailure() {
+  const failure = takeSliceSearchFailure();
+  const described = failure && describeSliceSearchFailure(failure);
+  notify({
+    title: described?.title ?? "Couldn't generate slices",
+    message:
+      described?.lines.join(" ") ??
+      "Could not generate slices with the current settings.",
+    tone: "danger",
+  });
+}
 
 export function useDraft(): DraftV2State;
 export function useDraft<T>(selector: (state: DraftV2State) => T): T;

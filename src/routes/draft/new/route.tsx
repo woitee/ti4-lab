@@ -24,6 +24,7 @@ import { OriginalArtToggle } from "~/components/OriginalArtToggle";
 import { SaveDraftPresetModal, SaveToHubModal } from "./-components/SaveDraftPresetModal";
 import { BuilderSection } from "./-sections/BuilderSection";
 import { MAPS } from "~/routes/draft/prechoice/-maps";
+import { takeSliceSearchFailure } from "~/draft/common/sliceSearch";
 import { Button, Code, Heading, Text, useDisclosure } from "~/ui";
 import classes from "./route.module.css";
 
@@ -75,7 +76,7 @@ function DraftNew() {
       return;
     }
 
-    const { draftSettings, players, discordData } = handoff;
+    const { draftSettings, players, discordData, setupSliceSettings } = handoff;
     actions.initializeDraft(draftSettings, players, { discord: discordData });
 
     if (
@@ -84,7 +85,12 @@ function DraftNew() {
     ) {
       navigate({
         to: "/draft/prechoice",
-        state: { invalidDraftParameters: true },
+        state: {
+          invalidDraftParameters: true,
+          sliceSearchFailure: takeSliceSearchFailure(),
+          failedDraftSettings: draftSettings,
+          setupSliceSettings,
+        },
       });
       return;
     }

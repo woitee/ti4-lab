@@ -15,11 +15,8 @@ import {
 import { systemData } from "~/data/systemData";
 import { generateEmptyMap, optimalStatsForSystems } from "~/utils/map";
 import { buildSliceValueConfig, calculateSliceValue } from "~/stats";
-import {
-  coreGenerateMap,
-  coreGenerateSlices,
-  postProcessSlices,
-} from "../common/sliceGenerator";
+import { coreGenerateMap, coreGenerateSlices } from "../common/sliceGenerator";
+import { limitsFromConfig } from "../common/sliceSearch";
 import { DEFAULT_SLICE_SETTINGS } from "~/draft/sliceSettings";
 import { draftConfig } from "../draftConfig";
 import { getFactionPool } from "~/utils/factions";
@@ -163,22 +160,34 @@ const validateSlice = (slice: SystemIds, config: SliceGenerationConfig) => {
 export const generateSlices = (
   sliceCount: number,
   availableSystems: SystemId[],
-  config?: SliceGenerationConfig,
+  config: SliceGenerationConfig = DEFAULT_CONFIG,
 ) =>
   coreGenerateSlices({
-    mecatolPath: config!.mecatolPathSystemIndices!,
+    mecatolPath: config.mecatolPathSystemIndices!,
+    // Milty EQ slices have no equidistant; those are on the map.
+    equidistantIndices: [],
     centerTile: 1,
     sliceCount,
     availableSystems,
-    config: config ?? DEFAULT_CONFIG,
+    config,
     sliceShape: SLICE_SHAPES.milty_eq,
     systemTiers: miltySystemTiers,
-    getSliceTiers: () => {
-      if (config?.hasMinorFactions)
-        return shuffle(weightedChoice(MINOR_FACTION_SLICE_CHOICES));
-
-      return shuffle(weightedChoice(SLICE_CHOICES));
-    },
+    getSliceTiers: () =>
+      weightedChoice(
+        config.hasMinorFactions ? MINOR_FACTION_SLICE_CHOICES : SLICE_CHOICES,
+      ),
+    limits: limitsFromConfig(config, {
+      minValue: config.minSliceValue ?? DEFAULT_CONFIG.minSliceValue,
+      maxValue: config.maxSliceValue ?? DEFAULT_CONFIG.maxSliceValue,
+      oneSpecialEach: true,
+      minAlphas: config.numAlphas ?? DEFAULT_CONFIG.minAlphaWormholes,
+      minBetas: config.numBetas ?? DEFAULT_CONFIG.minBetaWormholes,
+      minLegendaries: config.minLegendaries ?? DEFAULT_CONFIG.minLegendaries,
+      maxLegendaries: config.maxLegendaries,
+      safePath: config.safePathToMecatol,
+      safeCenter: config.centerTileNotEmpty,
+      highAdjacent: config.highQualityAdjacent,
+    }),
     validateSystems: (
       systems: TieredSystems,
       config: SliceGenerationConfig,
@@ -205,5 +214,4 @@ export const generateSlices = (
       );
     },
     validateSlice,
-    postProcessSlices,
   });

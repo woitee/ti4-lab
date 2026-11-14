@@ -50,7 +50,8 @@ import { MapStyleSelector } from "./-components/MapStyleSelector";
 import { SeededMapBanner } from "./-components/SeededMapBanner";
 import { decodeSeededMapData } from "~/mapgen/utils/mapToDraft";
 import { DraftFormatDescription } from "./-components/DraftFormatDescription";
-import { getMaxAvailableSlices } from "./-utils";
+import { getMaxAvailableSlices, getSettingsFormatType } from "./-utils";
+import { describeSliceSearchFailure } from "~/draft/common/sliceSearch";
 import { discordOauthUrl } from "~/discord/oauthUrls";
 import { useCreateDraft } from "~/hooks/useCreateDraft";
 import "../new/-handoff";
@@ -95,6 +96,15 @@ function DraftPrechoice() {
   const invalidDraftParameters = useLocation({
     select: (location) => location.state.invalidDraftParameters,
   });
+  const sliceSearchFailure = useLocation({
+    select: (location) => location.state.sliceSearchFailure,
+  });
+  const failedDraftSettings = useLocation({
+    select: (location) => location.state.failedDraftSettings,
+  });
+  const returnedSliceSettings = useLocation({
+    select: (location) => location.state.setupSliceSettings,
+  });
   const navigate = Route.useNavigate();
   const createDraft = useCreateDraft();
   const {
@@ -120,7 +130,10 @@ function DraftPrechoice() {
   const texas = useDraftSetup((state) => state.texas);
   const faction = useDraftSetup((state) => state.faction);
 
-  const [sliceSettings, setSliceSettings] = useState(DEFAULT_SLICE_SETTINGS);
+  // Back from a failed attempt: keep the slice settings that were used.
+  const [sliceSettings, setSliceSettings] = useState(
+    () => returnedSliceSettings ?? DEFAULT_SLICE_SETTINGS,
+  );
 
   const [activeSettingsFormat, setActiveSettingsFormat] =
     useState<SliceSettingsFormatType>("milty");
@@ -271,7 +284,7 @@ function DraftPrechoice() {
     } else {
       // Base draft mode - use normal settings
       const draftSettings = buildDraftSettings();
-      navigateToDraft(draftSettings);
+      navigateToDraft(draftSettings, sliceSettings);
     }
   };
 
@@ -345,6 +358,50 @@ function DraftPrechoice() {
     openSliceSettings();
   };
 
+  // The settings that failed, but take the closest slices the generator finds.
+  const handleUseClosestSlices = () => {
+    const draftSettings = failedDraftSettings ?? buildDraftSettings();
+    navigateToDraft(
+      {
+        ...draftSettings,
+        sliceGenerationConfig: {
+          ...draftSettings.sliceGenerationConfig,
+          allowClosestSlices: true,
+        },
+      },
+      sliceSettings,
+    );
+  };
+
+  const handleAdjustSliceSettings = () => {
+    const formatType = getSettingsFormatType(map.selectedMapType);
+    if (formatType) handleOpenSettings(formatType);
+  };
+
+  const failure =
+    sliceSearchFailure && describeSliceSearchFailure(sliceSearchFailure);
+  const failureNotice = failure && (
+    <Notice tone="danger" title={failure.title}>
+      {failure.lines.map((line) => (
+        <p key={line} className={classes.noticeLine}>
+          {line}
+        </p>
+      ))}
+      <div className={classes.noticeActions}>
+        {sliceSearchFailure.closestValues && draftMode === "base" && (
+          <Button size="sm" variant="primary" onClick={handleUseClosestSlices}>
+            Use closest slices
+          </Button>
+        )}
+        {getSettingsFormatType(map.selectedMapType) && (
+          <Button size="sm" onClick={handleAdjustSliceSettings}>
+            Adjust settings
+          </Button>
+        )}
+      </div>
+    </Notice>
+  );
+
   const commitLabel =
     draftMode === "texasStyle" ? "Start draft" : "Continue to draft builder";
 
@@ -396,12 +453,13 @@ function DraftPrechoice() {
           <div className={classes.banners}>
             {mapSlicesString && <SeededMapBanner />}
             {discordData && <DiscordBanner />}
-            {invalidDraftParameters && (
-              <Notice tone="danger" title="Invalid draft parameters">
-                Could not generate a draft with the given parameters. Please
-                try different minimal/total optimal values.
-              </Notice>
-            )}
+            {invalidDraftParameters &&
+              (failureNotice || (
+                <Notice tone="danger" title="Invalid draft parameters">
+                  Could not generate a draft with the given parameters. Please
+                  try different minimal/total optimal values.
+                </Notice>
+              ))}
           </div>
         )}
 

@@ -8,6 +8,17 @@
   margin-bottom: var(--space-6);
 }
 
+.noticeLine {
+  margin: 0 0 4px;
+}
+
+.noticeActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
 .grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);

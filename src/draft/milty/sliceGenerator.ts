@@ -14,11 +14,13 @@ import {
 import { factionSystems, systemData } from "~/data/systemData";
 import { optimalStatsForSystems } from "~/utils/map";
 import { buildSliceValueConfig, calculateSliceValue } from "~/stats";
-import {
-  coreGenerateSlices,
-  postProcessSlices,
-} from "../common/sliceGenerator";
+import { coreGenerateSlices } from "../common/sliceGenerator";
+import { limitsFromConfig } from "../common/sliceSearch";
 import { shuffle } from "../helpers/randomization";
+
+const SLICE_TIERS: ChoosableTier[] = ["high", "med", "low", "red", "red"];
+/** Slice position of the equidistant; minor factions are placed there. */
+const EQUIDISTANT_INDEX = 3;
 
 export function generateSlices(
   sliceCount: number,
@@ -32,11 +34,7 @@ export function generateSlices(
     minorFactionPool: undefined,
   },
   sliceShape: string[] = SLICE_SHAPES.milty,
-  minorFactionPool?: FactionId[],
-  attempts: number = 0,
 ) {
-  if (attempts > 1000) return undefined;
-
   // Validation function for systems
   const validateSystems = (
     systems: TieredSystems,
@@ -110,69 +108,58 @@ export function generateSlices(
     return true;
   };
 
-  const slices = coreGenerateSlices({
+  // Minor factions sit on the equidistant, in place of a blue tile of their
+  // tier, so the search values each slice with its minor faction.
+  const minorFactions: FactionId[] =
+    config.hasMinorFactions && config.minorFactionPool
+      ? shuffle(
+          config.minorFactionPool.filter((faction) => faction !== "keleres"),
+        ).slice(0, sliceCount)
+      : [];
+  const pinned = minorFactions.map((faction) => ({
+    index: EQUIDISTANT_INDEX,
+    systemId: factionSystems[faction]!.id,
+  }));
+
+  const sliceTiers = (sliceIdx: number): ChoosableTier[] => {
+    const minorFaction = minorFactions[sliceIdx];
+    if (!minorFaction) return SLICE_TIERS;
+    const minorFactionTier =
+      (Object.entries(minorFactionTiers).find(([, factions]) =>
+        factions.includes(minorFaction),
+      )?.[0] as ChoosableTier | undefined) ?? "med";
+    // A blue tile of the same tier, or any blue tile.
+    let replaced = SLICE_TIERS.indexOf(minorFactionTier);
+    if (replaced === -1 || minorFactionTier === "red")
+      replaced = SLICE_TIERS.findIndex((tier) => tier !== "red");
+    return SLICE_TIERS.filter((_, idx) => idx !== replaced);
+  };
+
+  return coreGenerateSlices({
     mecatolPath: config.mecatolPathSystemIndices!,
+    equidistantIndices: [EQUIDISTANT_INDEX],
     centerTile: 1,
     sliceCount,
     availableSystems,
     config,
     sliceShape,
     systemTiers: miltySystemTiers,
-    getSliceTiers: () => ["high", "med", "low", "red", "red"],
+    getSliceTiers: sliceTiers,
+    pinned: pinned.length > 0 ? pinned : undefined,
+    limits: limitsFromConfig(config, {
+      // As validateSlice: 0 or unset means no limit.
+      minValue: config.minSliceValue || undefined,
+      maxValue: config.maxSliceValue || undefined,
+      oneSpecialEach: true,
+      minAlphas: config.numAlphas ?? 2,
+      minBetas: config.numBetas ?? 2,
+      minLegendaries: config.minLegendaries ?? 1,
+      maxLegendaries: config.maxLegendaries,
+      safePath: config.safePathToMecatol,
+      safeCenter: config.centerTileNotEmpty,
+      highAdjacent: config.highQualityAdjacent,
+    }),
     validateSystems,
     validateSlice,
-    postProcessSlices,
   });
-
-  if (config.hasMinorFactions && config.minorFactionPool && slices) {
-    const chosenMinorFactions = shuffle(
-      config.minorFactionPool.filter((faction) => faction !== "keleres"),
-    ).slice(0, sliceCount);
-
-    // from each slice, get a blue tile of the equivalent tier as the minor faction, and replace it with the minor faction
-    slices.forEach((slice) => {
-      const minorFaction = chosenMinorFactions.pop()!;
-      const minorFactionTier =
-        Object.entries(minorFactionTiers).find(([, factions]) =>
-          factions.includes(minorFaction),
-        )?.[0] ?? ("med" as ChoosableTier);
-
-      // First try to find a blue tile of the equivalent tier
-      let blueTile = slice.find(
-        (systemId) =>
-          systemData[systemId].type === "BLUE" &&
-          miltySystemTiers[systemId] === minorFactionTier,
-      );
-
-      // Fallback to any blue tile if no matching tier found
-      if (!blueTile) {
-        blueTile = slice.find(
-          (systemId) => systemData[systemId].type === "BLUE",
-        )!;
-      }
-
-      const minorFactionSystem = factionSystems[minorFaction]!;
-      const blueTileIndex = slice.indexOf(blueTile);
-
-      // Make sure minor faction is at the equidistant position
-      slice[blueTileIndex] = slice[3];
-      slice[3] = minorFactionSystem.id;
-    });
-
-    for (let i = 0; i < slices.length; i++) {
-      const slice = slices[i];
-      if (!validateSlice(slice, config)) {
-        return generateSlices(
-          sliceCount,
-          availableSystems,
-          config,
-          sliceShape,
-          minorFactionPool,
-          attempts + 1,
-        );
-      }
-    }
-  }
-
-  return slices;
 }

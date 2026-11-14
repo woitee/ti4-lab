@@ -69,6 +69,11 @@ export type SliceGenerationConfig = {
   minorFactionPool?: FactionId[];
   sliceValueModifiers?: Partial<SliceValueModifiers>;
   mecatolPathSystemIndices?: number[];
+  /**
+   * When no slices meet the settings, use the closest set the search found
+   * instead of failing ("Use closest slices").
+   */
+  allowClosestSlices?: boolean;
 };
 
 export type DraftConfig = {

@@ -2,8 +2,6 @@ import { DraftSettings, FactionId, Map, SystemId, SystemIds } from "~/types";
 import {
   groupSystemsByTier,
   poolFitsWormholesPerSlice,
-  separateAnomalies,
-  shuffleTieredSystems,
 } from "../helpers/sliceGeneration";
 import { systemData } from "~/data/systemData";
 import {
@@ -27,35 +25,38 @@ import {
 } from "~/mapgen/utils/mapLegality";
 import { getSystemPool } from "~/utils/system";
 import { miltySystemTiers } from "~/data/miltyTileTiers";
-
-// Define which tiles are adjacent to home systems
-export const HOME_ADJACENT_TILES = [1, 2, 3];
+import {
+  recordSliceSearchFailure,
+  searchSlices,
+  SliceLimits,
+} from "./sliceSearch";
 
 export type CoreGenerateSlicesArgs = {
-  // Configuration parameters
   sliceCount: number;
+  /** TTPG slice shape (home first), for keeping anomalies apart. */
   sliceShape: string[];
   systemTiers: Record<string, ChoosableTier>;
   availableSystems: SystemId[];
   config: SliceGenerationConfig;
   mecatolPath: number[] | undefined;
+  /** Slice positions whose value is shared (equidistants). */
+  equidistantIndices: number[];
+  /** Slice position checked by "safe center tile". */
   centerTile: number;
+  /** What the slices must meet (value, influence/resources, wormholes, ...). */
+  limits: SliceLimits;
 
-  // Strategy functions
-  getSliceTiers: () => TieredSlice;
+  /** Tier pattern of a slice; called again when the search restarts. */
+  getSliceTiers: (sliceIdx: number) => TieredSlice;
+  /** A tile fixed at a slice position (minor factions), per slice. */
+  pinned?: ({ index: number; systemId: SystemId } | undefined)[];
+
+  /** The format's own checks, run on the final slices as a safety net. */
   validateSystems: (
     systems: TieredSystems,
     config: SliceGenerationConfig,
   ) => boolean;
   validateSlice: (slice: SystemIds, config: SliceGenerationConfig) => boolean;
-
-  // Post-processing options
-  postProcessSlices?: (
-    slices: SystemIds[],
-    config: SliceGenerationConfig,
-    mecatolPath?: number[],
-    centerTile?: number,
-  ) => void;
 };
 
 export function coreRerollSlice(
@@ -132,7 +133,8 @@ export const coreRerollMap = (settings: DraftSettings, slices: SystemIds[]) => {
 };
 
 /**
- * Generate a map and slices using a core function.
+ * Generate a map and slices using a core function. Returns undefined when no
+ * slices meet the settings (the reason is in takeSliceSearchFailure()).
  */
 export function coreGenerateMap(
   settings: DraftSettings,
@@ -148,37 +150,38 @@ export function coreGenerateMap(
   minorFactionPool?: FactionId[],
 ) {
   const config = draftConfig[settings.type];
-  const map = generateEmptyMap(config);
   const numMapTiles = config.modifiableMapTiles.length;
-  const slices = generateSlices(settings.numSlices, systemPool, {
-    ...settings.sliceGenerationConfig,
-    minorFactionPool,
-  });
 
-  if (!slices) return undefined;
-  const usedSystemIds = slices.flat(1);
-  const remainingSystemIds = shuffle(
-    systemPool.filter((id) => !usedSystemIds.includes(id)),
-  );
-  const mapSystemIds = shuffle(remainingSystemIds).slice(0, numMapTiles);
+  for (; ; attempts++) {
+    const map = generateEmptyMap(config);
+    const slices = generateSlices(settings.numSlices, systemPool, {
+      ...settings.sliceGenerationConfig,
+      minorFactionPool,
+    });
 
-  // fill map with chosen systems
-  config.modifiableMapTiles.forEach((idx) => {
-    map[idx] = {
-      idx: idx,
-      position: mapStringOrder[idx],
-      type: "SYSTEM",
-      systemId: mapSystemIds.pop()!,
-    };
-  });
+    if (!slices) return undefined;
+    const usedSystemIds = slices.flat(1);
+    const remainingSystemIds = shuffle(
+      systemPool.filter((id) => !usedSystemIds.includes(id)),
+    );
+    const mapSystemIds = shuffle(remainingSystemIds).slice(0, numMapTiles);
 
-  // if we have gone past max attempts, return the map regardless of validation
-  if (attempts > 1000) return { map, slices, valid: false };
-  if (!validateMap(config, settings, map, slices)) {
-    return coreGenerateMap(settings, systemPool, attempts + 1, generateSlices);
+    // fill map with chosen systems
+    config.modifiableMapTiles.forEach((idx) => {
+      map[idx] = {
+        idx: idx,
+        position: mapStringOrder[idx],
+        type: "SYSTEM",
+        systemId: mapSystemIds.pop()!,
+      };
+    });
+
+    // if we have gone past max attempts, return the map regardless of validation
+    if (attempts > 1000) return { map, slices, valid: false };
+    if (validateMap(config, settings, map, slices)) {
+      return { map, slices, valid: true };
+    }
   }
-
-  return { map, slices, valid: true };
 }
 
 const validateMap = (
@@ -221,8 +224,10 @@ const validateMap = (
 };
 
 /**
- * A flexible core function for generating game slices with various configurations.
- * Can be used by both milty and miltyeq slice generators.
+ * Generates slices for Milty-style formats with the slice search
+ * (see sliceSearch.ts). Returns undefined when no set meets the settings
+ * within the time limit, unless config.allowClosestSlices asks for the
+ * closest set instead; either way the failure is recorded for the caller.
  */
 export function coreGenerateSlices({
   mecatolPath,
@@ -232,416 +237,56 @@ export function coreGenerateSlices({
   sliceShape,
   sliceCount,
   config,
+  equidistantIndices,
+  limits,
   getSliceTiers,
+  pinned,
   validateSystems,
   validateSlice,
-  postProcessSlices,
 }: CoreGenerateSlicesArgs): SystemIds[] | undefined {
-  const allTieredSystems = groupSystemsByTier(availableSystems, systemTiers);
+  const pinnedIds = new Set(pinned?.flatMap((pin) => (pin ? [pin.systemId] : [])));
 
-  const rollSliceTiers = () => {
-    const tiers: TieredSlice[] = Array.from(
-      { length: sliceCount },
-      getSliceTiers,
-    );
-    const counts = tiers.flat().reduce(
-      (counts, tier) => {
-        // NOTE: "resolved" branch should never be triggered,
-        // but is currently required for the type checker
-        // as the types are a bit messy.
-        if (tier === "resolved") return counts;
-        counts[tier] = (counts[tier] || 0) + 1;
-        return counts;
-      },
-      { high: 0, med: 0, low: 0, red: 0 } as Record<ChoosableTier, number>,
-    );
-    return { tiers, counts };
-  };
-
-  // The weighted tier picks can ask for more systems in a tier than the pool
-  // has, so a roll is either rejected outright or retried below when no
-  // valid slices come out of it.
-  const fitsPool = (counts: Record<ChoosableTier, number>) =>
-    (Object.keys(counts) as ChoosableTier[]).every(
-      (tier) => counts[tier] <= (allTieredSystems[tier]?.length ?? 0),
-    );
-
-  let sliceTiers: TieredSlice[] = [];
-  let tierCounts = {} as Record<ChoosableTier, number>;
-
-  const gatherSlices = (): SystemIds[] | undefined => {
-    let slices: SystemIds[] | undefined = undefined;
-    for (let i = 0; i < 100; i++) {
-      const tieredSystems = gatherSystems();
-
-      if (!tieredSystems) {
-        continue;
-      }
-
-      const t_slices = gatherSlicesFromSystems(tieredSystems);
-
-      if (t_slices) {
-        let isValid = true;
-
-        // Separate anomalies
-        for (let sliceIndex = 0; sliceIndex < t_slices.length; sliceIndex++) {
-          let slice = t_slices[sliceIndex];
-          slice = separateAnomalies(
-            slice,
-            sliceShape,
-            config.wormholePositions,
-            config.wormholesPerSlice,
-          );
-          t_slices[sliceIndex] = slice;
-        }
-
-        // Run any post-processing if provided
-        if (postProcessSlices) {
-          postProcessSlices(t_slices, config, mecatolPath, centerTile);
-        }
-
-        // check slices
-        for (let sliceIndex = 0; sliceIndex < t_slices.length; sliceIndex++) {
-          if (!validateSlice(t_slices[sliceIndex], config)) {
-            isValid = false;
-            break;
-          }
-        }
-        if (!isValid) {
-          continue;
-        }
-
-        slices = t_slices;
-        break;
-      }
-    }
-
-    return slices;
-  };
-
-  const gatherSystems = () => {
-    let tieredSystems: TieredSystems | undefined = undefined;
-    for (let i = 0; i < 1000; i++) {
-      const shuffledTieredSystems = shuffleTieredSystems(allTieredSystems);
-      const t_tieredSystems = {
-        high: shuffledTieredSystems.high.slice(0, tierCounts.high),
-        med: shuffledTieredSystems.med.slice(0, tierCounts.med),
-        low: shuffledTieredSystems.low.slice(0, tierCounts.low),
-        red: shuffledTieredSystems.red.slice(0, tierCounts.red),
+  const result = searchSlices({
+    sliceCount,
+    pool: availableSystems.filter((id) => !pinnedIds.has(id)),
+    tierOf: (id) => systemTiers[id],
+    rollPatterns: () =>
+      Array.from({ length: sliceCount }, (_, i) =>
+        getSliceTiers(i).filter(
+          (tier): tier is ChoosableTier => tier !== "resolved",
+        ),
+      ),
+    pinned,
+    shape: sliceShape,
+    equidistantIndices,
+    mecatolPath: mecatolPath ?? [],
+    centerTile,
+    isHighQuality: (id) => miltySystemTiers[id] === "high",
+    limits,
+    validateSlice: (slice) => validateSlice(slice, config),
+    validateSet: (slices) => {
+      const chosen = slices.flat().filter((id) => !pinnedIds.has(id));
+      const grouped = groupSystemsByTier(chosen, systemTiers);
+      const tiered: TieredSystems = {
+        high: grouped.high ?? [],
+        med: grouped.med ?? [],
+        low: grouped.low ?? [],
+        red: grouped.red ?? [],
       };
-
-      // Make sure we have enough systems in each tier
-      // as sometimes the weighted picks grab more tiles in a tier
-      // than we have available.
-      if (
-        t_tieredSystems.high.length < tierCounts.high ||
-        t_tieredSystems.med.length < tierCounts.med ||
-        t_tieredSystems.low.length < tierCounts.low ||
-        t_tieredSystems.red.length < tierCounts.red
-      ) {
-        continue;
-      }
-
-      const chosen = Object.values(t_tieredSystems)
-        .flat()
-        .map((id) => systemData[id]);
-      if (
-        validateSystems(t_tieredSystems, config) &&
-        poolFitsWormholesPerSlice(chosen, sliceCount, config.wormholesPerSlice)
-      ) {
-        tieredSystems = t_tieredSystems;
-        break;
-      }
-    }
-
-    return tieredSystems;
-  };
-
-  const gatherSlicesFromSystems = (
-    tieredSystems: TieredSystems,
-  ): SystemIds[] | undefined => {
-    let slices: SystemIds[] = [];
-    for (let i = 0; i < 1000; i++) {
-      const t_tieredSystems: TieredSystems = JSON.parse(
-        JSON.stringify(tieredSystems),
-      );
-      t_tieredSystems.high = shuffle(t_tieredSystems.high);
-      t_tieredSystems.low = shuffle(t_tieredSystems.low);
-      t_tieredSystems.med = shuffle(t_tieredSystems.med);
-      t_tieredSystems.red = shuffle(t_tieredSystems.red);
-      for (let i = 0; i < sliceCount; i++) {
-        const tierValues = sliceTiers[i];
-        const slice: SystemId[] = tierValues.map(
-          (tier) => t_tieredSystems[tier as ChoosableTier].shift()!,
-        );
-
-        const shuffledSlice = shuffle(slice);
-        // Positions aren't final yet (anomaly separation reorders them),
-        // so wormhole positions are checked after that.
-        if (
-          !validateSlice(shuffledSlice, {
-            ...config,
-            wormholePositions: undefined,
-          })
+      return (
+        validateSystems(tiered, config) &&
+        poolFitsWormholesPerSlice(
+          chosen.map((id) => systemData[id]),
+          sliceCount,
+          config.wormholesPerSlice,
         )
-          break;
-        slices.push(shuffledSlice);
-      }
-      if (slices.length !== sliceCount) {
-        slices = [];
-      } else {
-        break;
-      }
-    }
-
-    return slices.length ? slices : undefined;
-  };
-
-  for (let roll = 0; roll < 20; roll++) {
-    const rolled = rollSliceTiers();
-    if (!fitsPool(rolled.counts)) continue;
-    sliceTiers = rolled.tiers;
-    tierCounts = rolled.counts;
-
-    const slices = gatherSlices();
-    if (slices) return slices;
-  }
-
-  return undefined;
-}
-
-// Function to check if center tile no empty and no anomaly
-export function checkFirstTileToMecatolIsSafe(
-  slice: SystemIds,
-  centerTile?: number,
-): boolean {
-  // If no centerTile is specified in the config, always return true
-  if (!centerTile) return true;
-
-  // Skip if index out of bounds
-  if (centerTile >= slice.length) {
-    return true;
-  }
-
-  // Check if center tile in the path is an anomaly or without planets
-  const systemId = slice[centerTile];
-  const system = systemData[systemId];
-  return !(system.anomalies.length > 0 || system.planets.length === 0);
-}
-
-// Function to check if a slice has a safe path to Mecatol
-export function hasPathToMecatol(
-  slice: SystemIds,
-  mecatolPath: number[] | undefined,
-): boolean {
-  // If no mecatolPath is specified in the config, always return true
-  if (!mecatolPath || mecatolPath.length === 0) return true;
-
-  // Check if any tile in the path is an anomaly
-  for (const tileIndex of mecatolPath) {
-    if (tileIndex >= slice.length) continue; // Skip if index out of bounds
-
-    const systemId = slice[tileIndex];
-    const system = systemData[systemId];
-    if (system.anomalies.length > 0) return false;
-  }
-
-  return true;
-}
-
-// Ensure a center tile no anomaly and with planets
-export function ensureCenterTileIsSafe(
-  slices: SystemIds[],
-  minCenterSafeCount: number,
-  centerTile?: number,
-): void {
-  if (!centerTile) return;
-
-  const centerSafeSlices = slices.filter((slice) =>
-    checkFirstTileToMecatolIsSafe(slice, centerTile),
-  );
-  if (centerSafeSlices.length >= minCenterSafeCount) return;
-
-  // Get indices of slices without safe center
-  const unsafeSliceIndices = slices
-    .map((slice, index) => ({ slice, index }))
-    .filter(({ slice }) => !checkFirstTileToMecatolIsSafe(slice, centerTile))
-    .map(({ index }) => index);
-
-  const slicesToFix = Math.min(
-    minCenterSafeCount - centerSafeSlices.length,
-    unsafeSliceIndices.length,
-  );
-
-  unsafeSliceIndices.slice(0, slicesToFix).forEach((sliceIndex) => {
-    const slice = [...slices[sliceIndex]];
-
-    const centerEmptyOrAnomaly =
-      centerTile < slice.length &&
-      (systemData[slice[centerTile]]?.anomalies.length > 0 ||
-        systemData[slice[centerTile]]?.planets.length === 0);
-
-    const nonPathNonAnomalyOrEmptyIndices = Array.from({ length: slice.length })
-      .map((_, index) => index)
-      .filter((index) => centerTile !== index)
-      .filter((index) => {
-        const system = systemData[slice[index]];
-        return system.anomalies.length === 0 && system.planets.length > 0;
-      });
-
-    const swapsNeeded = Math.min(
-      centerEmptyOrAnomaly ? 1 : 0,
-      nonPathNonAnomalyOrEmptyIndices.length,
-    );
-
-    for (let i = 0; i < swapsNeeded; i++) {
-      const nonPathIndex = nonPathNonAnomalyOrEmptyIndices[i];
-
-      // Swap the tiles
-      [slice[centerTile], slice[nonPathIndex]] = [
-        slice[nonPathIndex],
-        slice[centerTile],
-      ];
-    }
-
-    // Update the slice if we've fixed it
-    if (checkFirstTileToMecatolIsSafe(slice, centerTile))
-      slices[sliceIndex] = slice;
+      );
+    },
   });
-}
 
-// Ensure a minimum number of slices have a safe path to Mecatol
-export function ensureSafePathToMecatol(
-  slices: SystemIds[],
-  minSafePathCount: number,
-  mecatolPath: number[] | undefined,
-): void {
-  if (!mecatolPath || mecatolPath.length === 0) return;
-
-  const safePathSlices = slices.filter((slice) =>
-    hasPathToMecatol(slice, mecatolPath),
-  );
-  if (safePathSlices.length >= minSafePathCount) return;
-
-  // Get indices of slices without safe paths
-  const unsafeSliceIndices = slices
-    .map((slice, index) => ({ slice, index }))
-    .filter(({ slice }) => !hasPathToMecatol(slice, mecatolPath))
-    .map(({ index }) => index);
-
-  const slicesToFix = Math.min(
-    minSafePathCount - safePathSlices.length,
-    unsafeSliceIndices.length,
-  );
-
-  unsafeSliceIndices.slice(0, slicesToFix).forEach((sliceIndex) => {
-    const slice = [...slices[sliceIndex]];
-
-    const anomaliesOnPath = mecatolPath
-      .filter((pathIndex) => pathIndex < slice.length)
-      .filter((pathIndex) => {
-        const system = systemData[slice[pathIndex]];
-        return system.anomalies.length > 0;
-      });
-
-    const nonPathNonAnomalyIndices = Array.from({ length: slice.length })
-      .map((_, index) => index)
-      .filter((index) => !mecatolPath.includes(index))
-      .filter((index) => {
-        const system = systemData[slice[index]];
-        return system.anomalies.length === 0;
-      });
-
-    const swapsNeeded = Math.min(
-      anomaliesOnPath.length,
-      nonPathNonAnomalyIndices.length,
-    );
-
-    for (let i = 0; i < swapsNeeded; i++) {
-      const pathIndex = anomaliesOnPath[i];
-      const nonPathIndex = nonPathNonAnomalyIndices[i];
-
-      // Swap the tiles
-      [slice[pathIndex], slice[nonPathIndex]] = [
-        slice[nonPathIndex],
-        slice[pathIndex],
-      ];
-    }
-
-    // Update the slice if we've fixed it
-    if (hasPathToMecatol(slice, mecatolPath)) slices[sliceIndex] = slice;
-  });
-}
-
-// Ensure a minimum number of slices have high-quality tiles adjacent to home
-export function ensureHighQualityAdjacent(
-  slices: SystemIds[],
-  minHighQualityCount: number,
-  systemTiers: Record<string, ChoosableTier>,
-): void {
-  // Create a function to check for high quality adjacency with the provided system tiers
-  const hasHighQuality = (slice: SystemIds) => {
-    for (const tileIndex of HOME_ADJACENT_TILES) {
-      if (tileIndex >= slice.length) continue;
-
-      const systemId = slice[tileIndex];
-      const tier = systemTiers[systemId];
-      if (tier === "high") return true;
-    }
-    return false;
-  };
-
-  // Count slices that already have high-quality adjacent tiles
-  const highQualitySlices = slices.filter(hasHighQuality);
-
-  // If we already meet the criteria, we're done
-  if (highQualitySlices.length >= minHighQualityCount) return;
-
-  // Get indices of slices without high-quality adjacent tiles
-  const lowQualitySliceIndices = slices
-    .map((slice, index) => ({ slice, index }))
-    .filter(({ slice }) => !hasHighQuality(slice))
-    .map(({ index }) => index);
-
-  // Number of slices we need to fix
-  const slicesToFix = Math.min(
-    minHighQualityCount - highQualitySlices.length,
-    lowQualitySliceIndices.length,
-  );
-
-  // Process only as many slices as needed to meet requirements
-  lowQualitySliceIndices.slice(0, slicesToFix).forEach((sliceIndex) => {
-    const slice = [...slices[sliceIndex]];
-
-    // Find indices of high-quality tiles not adjacent to home
-    const highQualityIndices = Array.from({ length: slice.length })
-      .map((_, index) => index)
-      .filter((index) => !HOME_ADJACENT_TILES.includes(index))
-      .filter((index) => systemTiers[slice[index]] === "high");
-
-    // Find indices of non-high-quality tiles adjacent to home
-    const nonHighQualityAdjacentIndices = HOME_ADJACENT_TILES.filter(
-      (index) => index < slice.length,
-    ).filter((index) => systemTiers[slice[index]] !== "high");
-
-    // If we have both types of tiles, we can do a swap
-    if (
-      highQualityIndices.length > 0 &&
-      nonHighQualityAdjacentIndices.length > 0
-    ) {
-      const highQualityIndex = highQualityIndices[0];
-      const adjacentIndex = nonHighQualityAdjacentIndices[0];
-
-      // Swap the tiles
-      [slice[adjacentIndex], slice[highQualityIndex]] = [
-        slice[highQualityIndex],
-        slice[adjacentIndex],
-      ];
-
-      // Update the slice
-      slices[sliceIndex] = slice;
-    }
-  });
+  if (result.valid) return result.slices;
+  recordSliceSearchFailure(result.failure);
+  return config.allowClosestSlices ? result.slices : undefined;
 }
 
 // Regular 6p map has 36 tiles, 11 of which are red.
@@ -687,30 +332,3 @@ const STANDARD_GRID = mapStringOrder.map((position) => ({ position }));
 export function getAdjacentPositions(position: number): number[] {
   return getAllNeighbors(STANDARD_GRID, position);
 }
-
-// Post-processing function for Mecatol path, safe center tile and high-quality adjacent requirements
-export const postProcessSlices = (
-  slices: SystemIds[],
-  config: SliceGenerationConfig,
-  mecatolPath?: number[],
-  centerTile?: number,
-) => {
-  // Check for safe center tile
-  if (config.centerTileNotEmpty && config.centerTileNotEmpty > 0) {
-    ensureCenterTileIsSafe(slices, config.centerTileNotEmpty, centerTile);
-  }
-
-  // Check for safe path to Mecatol requirement
-  if (config.safePathToMecatol && config.safePathToMecatol > 0) {
-    ensureSafePathToMecatol(slices, config.safePathToMecatol, mecatolPath);
-  }
-
-  // Check for high-quality adjacent to home requirement
-  if (config.highQualityAdjacent && config.highQualityAdjacent > 0) {
-    ensureHighQualityAdjacent(
-      slices,
-      config.highQualityAdjacent,
-      miltySystemTiers,
-    );
-  }
-};

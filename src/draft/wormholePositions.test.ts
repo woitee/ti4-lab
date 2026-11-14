@@ -175,7 +175,7 @@ test("Nucleus: the required wormhole on a selected position", () => {
   });
   for (const mode of ["atLeastOne", "exactlyOne"] as const) {
     for (let i = 0; i < 5; i++) {
-      const result = generateHeisenMap(settings(mode), [...basePok]);
+      const result = generateHeisenMap(settings(mode), [...basePok])!;
       expect(result.valid).toBe(true);
       expectRequiredOnSelected(result.slices, [false, true, false], mode);
     }

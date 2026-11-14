@@ -91,7 +91,7 @@ describe.each(["atLeastOne", "exactlyOne"] as const)("%s", (mode) => {
       },
     };
     for (let i = 0; i < 10; i++) {
-      const result = generateHeisenMap(settings, [...basePok]);
+      const result = generateHeisenMap(settings, [...basePok])!;
       expect(result.valid).toBe(true);
       expectMode(result.slices, mode);
     }

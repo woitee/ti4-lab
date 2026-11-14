@@ -5,6 +5,10 @@ import { notifyPick } from "~/discord/notify.server";
 import { addDraftToUserHub } from "~/drizzle/hub.server";
 import { buildInitialDraft } from "~/draft/buildInitialDraft";
 import {
+  SliceSearchFailure,
+  takeSliceSearchFailure,
+} from "~/draft/common/sliceSearch";
+import {
   applyTexasFactionCommit,
   applyTexasTileCommit,
   isTexasTilePhase,
@@ -112,7 +116,10 @@ export const createDraft = createServerFn({ method: "POST" })
 const MIN_DRAFTS = 2;
 const MAX_DRAFTS = 9;
 
-/** Generates several drafts from the same settings and groups them. */
+/**
+ * Generates several drafts from the same settings and groups them. When the
+ * settings can't produce slices, returns why instead (shown on the setup page).
+ */
 export const createMultiDraft = createServerFn({ method: "POST" })
   .validator(
     (input: {
@@ -127,7 +134,12 @@ export const createMultiDraft = createServerFn({ method: "POST" })
       return input;
     },
   )
-  .handler(async ({ data: { settings, players, discordData, numDrafts } }) => {
+  .handler(
+    async ({
+      data: { settings, players, discordData, numDrafts },
+    }): Promise<
+      { prettyUrl: string } | { sliceSearchFailure: SliceSearchFailure }
+    > => {
     const count = Math.min(
       MAX_DRAFTS,
       Math.max(MIN_DRAFTS, optionalNumber(numDrafts) ?? MIN_DRAFTS),
@@ -135,10 +147,13 @@ export const createMultiDraft = createServerFn({ method: "POST" })
 
     const drafts: Draft[] = [];
     for (let i = 0; i < count; i++) {
+      takeSliceSearchFailure();
       const initial = buildInitialDraft(settings, players, {
         discord: discordData,
       });
       if (!initial) {
+        const sliceSearchFailure = takeSliceSearchFailure();
+        if (sliceSearchFailure) return { sliceSearchFailure };
         throw new Error("Could not generate a valid map with the given settings.");
       }
       drafts.push(withDraftOrder(initial));
@@ -153,7 +168,8 @@ export const createMultiDraft = createServerFn({ method: "POST" })
     }
 
     return { prettyUrl: await insertMultiDraft(draftUrlNames) };
-  });
+    },
+  );
 
 // ---------------------------------------------------------------- live draft
 

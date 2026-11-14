@@ -8,16 +8,17 @@ import {
   TieredSlice,
 } from "../types";
 import { calculateTier, getTieredSystems } from "../tieredSystems";
+import { countedWormholes } from "../helpers/sliceGeneration";
 import {
-  chooseRequiredSystems,
-  countedWormholes,
-  fillSlicesWithRemainingTiles,
-  fillSlicesWithRequiredTiles,
-  moveWormholeToSelectedPosition,
-  wormholePositionsOk,
-  wormholesPerSliceOk,
-} from "../helpers/sliceGeneration";
-import { PlanetTrait, SystemIds, SystemId, DraftSettings } from "~/types";
+  limitsFromConfig,
+  recordSliceSearchFailure,
+  searchSlices,
+  SLICE_SEARCH_TIME_LIMIT_MS,
+  SliceLimits,
+  SliceSearchFailure,
+  sliceMeetsLimits,
+} from "../common/sliceSearch";
+import { PlanetTrait, SystemId, DraftSettings, Map as GameMap } from "~/types";
 import { generateEmptyMap } from "~/utils/map";
 import { draftConfig } from "../draftConfig";
 import { calculateMapStats } from "~/utils/mapStats";
@@ -27,7 +28,6 @@ import {
   areSystemsCompatibleAdjacent,
 } from "~/mapgen/utils/mapLegality";
 import {
-  buildSliceValueConfig,
   calculateSliceValue,
   compactSliceSlots,
   CORE_SLICE_VALUE_CONFIG,
@@ -100,37 +100,80 @@ const CORE_SLICE_MIN_OPTIMAL = 3; // Minimum optimal value for a core slice
 const CORE_SLICE_MAX_OPTIMAL = 8; // Maximum optimal value for a core slice
 const CORE_SLICE_MAX_BALANCE = 6; // Maximum difference between best and worst core slice
 const MIN_RED_TILES = 11; // Minimum red tiles on the map
-const MAX_VALIDATED_ATTEMPTS = 1000;
+/** Safety cap on map attempts, on top of the time limit. */
+const MAX_ATTEMPTS = 5000;
 
+/**
+ * Generates a Nucleus map and slices. Player slices come from the slice
+ * search; the rest of the map is retried until it passes the balance checks,
+ * within SLICE_SEARCH_TIME_LIMIT_MS. Never returns slices outside the
+ * settings: on failure it returns undefined (the reason is recorded, see
+ * takeSliceSearchFailure), or with allowClosestSlices the closest attempt,
+ * flagged valid: false.
+ */
 export function generateMap(settings: DraftSettings, systemPool: SystemId[]) {
+  const allowClosest = !!settings.sliceGenerationConfig?.allowClosestSlices;
+  const deadline = performance.now() + SLICE_SEARCH_TIME_LIMIT_MS;
   for (let attempts = 0; ; attempts++) {
-    const validate = attempts <= MAX_VALIDATED_ATTEMPTS;
-    const result = tryGenerateMap(settings, systemPool, validate);
-    if (result) return { ...result, valid: validate };
+    const remaining = Math.max(0, deadline - performance.now());
+    const result = tryGenerateMap(settings, systemPool, remaining);
+    if (result.valid && result.slices) {
+      return { map: result.map, slices: result.slices, valid: true };
+    }
+    const outOfTime = performance.now() >= deadline || attempts >= MAX_ATTEMPTS;
+    if (result.slicesFailure || outOfTime) {
+      recordSliceSearchFailure(
+        result.slicesFailure ?? {
+          sliceCount: settings.numSlices,
+          limits: {},
+          problems: ["the map around the slices couldn't be balanced"],
+        },
+      );
+      return allowClosest && result.slices
+        ? { map: result.map, slices: result.slices, valid: false }
+        : undefined;
+    }
   }
 }
 
+/** Per-slice limits for Nucleus player slices, with its defaults. */
+function nucleusSliceLimits(config: SliceGenerationConfig | undefined): SliceLimits {
+  return limitsFromConfig(config ?? {}, {
+    minValue: config?.minSliceValue ?? 4,
+    maxValue: config?.maxSliceValue ?? 10,
+    minPlanets: config?.minPlanets ?? 2,
+    maxPlanets: config?.maxPlanets ?? 5,
+  });
+}
+
+type Attempt = {
+  map: GameMap;
+  slices: SystemId[][] | undefined;
+  valid: boolean;
+  /** Set when no player slices meet the settings. */
+  slicesFailure?: SliceSearchFailure;
+};
+
 /**
- * One generation attempt. Returns undefined if validation is enabled and the
- * generated heisen map fails the balance checks.
+ * One generation attempt: player slices within `timeLimitMs`, then the map.
+ * valid is false when the slices or the map balance checks fail.
  */
 function tryGenerateMap(
   settings: DraftSettings,
   systemPool: SystemId[],
-  validate: boolean,
-) {
+  timeLimitMs: number,
+): Attempt {
   const sliceCount = settings.numSlices;
   const config = draftConfig[settings.type];
   const sliceGenConfig = settings.sliceGenerationConfig;
   const sliceValueModifiers = sliceGenConfig?.sliceValueModifiers;
 
-  // Slice value constraints from config, with fallback defaults
-  const minSliceValue = sliceGenConfig?.minSliceValue ?? 4;
-  const maxSliceValue = sliceGenConfig?.maxSliceValue ?? 10;
-  const minPlanetsPerSlice = sliceGenConfig?.minPlanets ?? 2;
-  const maxPlanetsPerSlice = sliceGenConfig?.maxPlanets ?? 5;
   const wormholesPerSlice = sliceGenConfig?.wormholesPerSlice;
-  const wormholePositions = sliceGenConfig?.wormholePositions;
+  const sliceLimits = nucleusSliceLimits(sliceGenConfig);
+  const slicePositions = {
+    equidistantIndices: [],
+    mecatolPath: config.mecatolPathSystemIndices ?? [],
+  };
 
   // a bit hacky, but works for now
   // this changes between heisen and heisen8p
@@ -257,13 +300,19 @@ function tryGenerateMap(
   // ---------------------------------------------------------------------------------
   // Step 2: Generate slices, distributing remaining alphas/betas/legendaries equally
   // ---------------------------------------------------------------------------------
-  const slices = generateSlices(sliceCount, remainingSystems(), {
-    numAlphas: remainingAlphas,
-    numBetas: remainingBetas,
-    minLegendaries: remainingLegendaries,
-    wormholesPerSlice,
-    wormholePositions,
-  });
+  const sliceSearch = searchSlices(
+    nucleusSliceSpec(sliceCount, remainingSystems(), {
+      ...sliceLimits,
+      minAlphas: remainingAlphas,
+      minBetas: remainingBetas,
+      minLegendaries: remainingLegendaries,
+    }, slicePositions.mecatolPath, timeLimitMs),
+  );
+  const slices = sliceSearch.slices;
+  const slicesFailure = sliceSearch.valid ? undefined : sliceSearch.failure;
+  if (!slices) {
+    return { map: generateEmptyMap(config), slices, valid: false, slicesFailure };
+  }
   // promote the chosen slice systems.
   chosenSliceSystems = slices.flat(1);
 
@@ -352,11 +401,13 @@ function tryGenerateMap(
       return;
     }
 
-    // swap on slices, if in slices
+    // swap on slices, if in slices and the slice still meets the settings
     const sliceIdx = slices.findIndex((slice) => slice.includes(toRemove));
     if (sliceIdx !== -1) {
-      const systemIdx = slices[sliceIdx].indexOf(toRemove);
-      slices[sliceIdx][systemIdx] = toAdd;
+      const swapped = slices[sliceIdx].map((id) => (id === toRemove ? toAdd : id));
+      if (!slicesFailure && sliceMeetsLimits(swapped, sliceLimits, slicePositions)) {
+        slices[sliceIdx] = swapped;
+      }
       return;
     }
   });
@@ -372,45 +423,20 @@ function tryGenerateMap(
   });
 
   // ------------------------------------------------
-  // Step 6: Validate map and core slice balance
+  // Step 6: Validate slices, map and core slice balance
   // ------------------------------------------------
+  // The search already met the slice settings; this re-checks them after the
+  // trait swaps with the app's own value calculation.
+  if (slicesFailure) return { map, slices, valid: false, slicesFailure };
   if (
-    validate &&
-    !slices.every(
-      (slice) =>
-        wormholesPerSliceOk(
-          slice.map((id) => systemData[id]),
-          wormholesPerSlice,
-        ) && wormholePositionsOk(slice, wormholePositions, wormholesPerSlice),
+    !slices.every((slice) =>
+      sliceMeetsLimits(slice, sliceLimits, slicePositions),
     )
   ) {
-    return undefined;
+    return { map, slices, valid: false };
   }
 
-  if (settings.type === "heisen" && validate) {
-    // Calculate min/max planets across all slices
-    const planetCounts = slices.map((slice) =>
-      slice.reduce(
-        (sum, systemId) => sum + systemData[systemId].planets.length,
-        0,
-      ),
-    );
-    const minPlanets = Math.min(...planetCounts);
-    const maxPlanets = Math.max(...planetCounts);
-
-    const totalSpends = slices.map((s) => {
-      return calculateSliceValue(
-        s.map((id) => systemData[id]),
-        buildSliceValueConfig(
-          sliceValueModifiers,
-          [],
-          config.mecatolPathSystemIndices!,
-        ),
-      );
-    });
-    const minTotalSpend = Math.min(...totalSpends);
-    const maxTotalSpend = Math.max(...totalSpends);
-
+  if (settings.type === "heisen") {
     const coreSliceValues = calculateCoreSliceValues(
       CORE_SLICES,
       chosenMapLocations,
@@ -435,10 +461,6 @@ function tryGenerateMap(
     const mapStats = calculateMapStats(slices, map);
 
     if (
-      minTotalSpend < minSliceValue ||
-      maxTotalSpend > maxSliceValue ||
-      minPlanets < minPlanetsPerSlice ||
-      maxPlanets > maxPlanetsPerSlice ||
       redTileCount < MIN_RED_TILES ||
       mapStats.totalLegendary > 4 ||
       minCoreSpend < CORE_SLICE_MIN_OPTIMAL ||
@@ -446,11 +468,11 @@ function tryGenerateMap(
       coreSliceBalance > CORE_SLICE_MAX_BALANCE ||
       hasAdjacentAnomalies(chosenMapLocations)
     ) {
-      return undefined;
+      return { map, slices, valid: false };
     }
   }
 
-  return { map, slices };
+  return { map, slices, valid: true };
 }
 
 function calculateCoreSliceValues(
@@ -737,6 +759,10 @@ const countPlanetTraits = (used: SystemId[]) => {
   return planetTraits;
 };
 
+/**
+ * Nucleus player slices (also std4p, and slice rerolls): slices of three
+ * tiles following SLICE_CHOICES tier patterns, found with the slice search.
+ */
 export function generateSlices(
   sliceCount: number,
   availableSystems: SystemId[],
@@ -746,63 +772,49 @@ export function generateSlices(
     minLegendaries: 0,
   },
 ) {
-  const tieredSlices: TieredSlice[] = [];
-  for (let i = 0; i < sliceCount; i++) {
-    const tierValues = shuffle(weightedChoice(SLICE_CHOICES));
-    tieredSlices.push(tierValues);
-  }
-  const slices: SystemIds[] = Array.from({ length: sliceCount }, () => []);
-
-  // "Wormholes per slice": put one counted wormhole into each slice first.
-  // For "exactly one", the other counted wormholes stay out of the slices.
-  const candidates = sliceWormholeCandidates(
-    availableSystems,
-    config.wormholesPerSlice,
-  );
-  const perSliceWormholes = candidates.slice(0, sliceCount);
-  perSliceWormholes.forEach((id, sliceIdx) => {
-    const tier = calculateTier(systemData[id]) as ChoosableTier;
-    const tileIdx = tieredSlices[sliceIdx].indexOf(tier);
-    tieredSlices[sliceIdx][tileIdx === -1 ? 0 : tileIdx] = "resolved";
-    slices[sliceIdx].push(id);
-  });
-  const slicePool = availableSystems.filter(
-    (id) =>
-      !perSliceWormholes.includes(id) &&
-      (config.wormholesPerSlice !== "exactlyOne" ||
-        countedWormholes(systemData[id]) === 0),
-  );
-
-  // Enforce a minimum number of wormholes and legendary planets
-  const { chosenTiles, remainingTiles } = chooseRequiredSystems(slicePool, {
-    minAlphaWormholes: config.numAlphas,
-    minBetaWormholes: config.numBetas,
-    minLegendary: config.minLegendaries ?? 0,
-  });
-  const tieredChosenTiles = getTieredSystems(chosenTiles);
-  const tieredRemainingTiles = getTieredSystems(remainingTiles);
-
-  // distirbute the wormholes/legendaries in round robin fashion
-  // on the slices.
-  fillSlicesWithRequiredTiles(tieredSlices, tieredChosenTiles, slices);
-
-  // fill slices with remaining tiles, respecting the 'tier' requirements
-  // of the spots in each slice.
-  fillSlicesWithRemainingTiles(
-    tieredSlices,
-    tieredRemainingTiles,
-    slices,
-    config?.sliceValueModifiers,
-  );
-
-  // shuffle the slices, with the required wormhole on a selected position
-  return slices.map((slice) =>
-    moveWormholeToSelectedPosition(
-      shuffle(slice),
-      config.wormholePositions,
-      config.wormholesPerSlice,
+  const result = searchSlices(
+    nucleusSliceSpec(
+      sliceCount,
+      availableSystems,
+      limitsFromConfig(config, {
+        minAlphas: config.numAlphas,
+        minBetas: config.numBetas,
+        minLegendaries: config.minLegendaries,
+      }),
+      config.mecatolPathSystemIndices ?? [],
     ),
   );
+  if (result.valid) return result.slices;
+  recordSliceSearchFailure(result.failure);
+  return config.allowClosestSlices ? result.slices : undefined;
+}
+
+const NUCLEUS_TIERS = new Set(["low", "med", "high", "red"]);
+
+function nucleusSliceSpec(
+  sliceCount: number,
+  pool: SystemId[],
+  limits: SliceLimits,
+  mecatolPath: number[],
+  timeLimitMs?: number,
+) {
+  return {
+    sliceCount,
+    pool,
+    tierOf: (id: SystemId) => {
+      const tier = calculateTier(systemData[id]);
+      return NUCLEUS_TIERS.has(tier) ? (tier as ChoosableTier) : undefined;
+    },
+    rollPatterns: () =>
+      Array.from({ length: sliceCount }, () => weightedChoice(SLICE_CHOICES)),
+    equidistantIndices: [],
+    mecatolPath,
+    // Avoid two alphas, betas or legendaries in one slice.
+    limits: { ...limits, oneSpecialEach: true },
+    validateSlice: (slice: SystemId[]) =>
+      sliceMeetsLimits(slice, limits, { equidistantIndices: [], mecatolPath }),
+    timeLimitMs,
+  };
 }
 
 /**

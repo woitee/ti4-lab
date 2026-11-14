@@ -9,7 +9,8 @@ import { useDraftSetup } from "./-store";
 import { buildSliceGenerationConfig } from "./-utils";
 import { decodeSeededMapData } from "~/mapgen/utils/mapToDraft";
 import { createMultiDraft } from "~/server/drafts.functions";
-import "../new/-handoff";
+import type { SetupSliceSettings } from "../new/-handoff";
+import { notify } from "~/ui";
 
 const prechoiceRoute = getRouteApi("/draft/prechoice");
 
@@ -78,14 +79,22 @@ export const useDraftNavigation = (discordData?: DiscordData) => {
   const mapSlicesString = prechoiceRoute.useSearch({ select: (s) => s.mapSlices });
   const multiDraft = useMutation({
     mutationFn: createMultiDraft,
-    onSuccess: ({ prettyUrl }) =>
-      navigate({ to: "/multidraft/$id", params: { id: prettyUrl } }),
+    onError: (error) =>
+      notify({
+        tone: "danger",
+        title: "Could not create the drafts",
+        message: error instanceof Error ? error.message : String(error),
+      }),
   });
   const player = useDraftSetup((state) => state.player);
   const multidraft = useDraftSetup((state) => state.multidraft);
   const map = useDraftSetup((state) => state.map);
 
-  const navigateToDraft = (draftSettings: DraftSettings) => {
+  /** setupSliceSettings: the page's slice settings, restored if this fails. */
+  const navigateToDraft = (
+    draftSettings: DraftSettings,
+    setupSliceSettings?: SetupSliceSettings,
+  ) => {
     // Check if we have seeded map data in URL params AND it's compatible with selected map type
     let finalDraftSettings = draftSettings;
 
@@ -106,14 +115,39 @@ export const useDraftNavigation = (discordData?: DiscordData) => {
     }
 
     if (multidraft.isMultidraft) {
-      multiDraft.mutate({
-        data: {
-          settings: finalDraftSettings,
-          players: player.players,
-          discordData,
-          numDrafts: multidraft.numDrafts,
+      multiDraft.mutate(
+        {
+          data: {
+            settings: finalDraftSettings,
+            players: player.players,
+            discordData,
+            numDrafts: multidraft.numDrafts,
+          },
         },
-      });
+        {
+          onSuccess: (result) => {
+            if ("sliceSearchFailure" in result) {
+              // Same notice as a single draft that can't be generated.
+              navigate({
+                to: "/draft/prechoice",
+                search: (prev) => prev,
+                state: {
+                  invalidDraftParameters: true,
+                  sliceSearchFailure: result.sliceSearchFailure,
+                  failedDraftSettings: finalDraftSettings,
+                  setupSliceSettings,
+                },
+                replace: true,
+              });
+              return;
+            }
+            navigate({
+              to: "/multidraft/$id",
+              params: { id: result.prettyUrl },
+            });
+          },
+        },
+      );
       return;
     }
 
@@ -124,6 +158,7 @@ export const useDraftNavigation = (discordData?: DiscordData) => {
           draftSettings: finalDraftSettings,
           players: player.players,
           discordData,
+          setupSliceSettings,
         },
       },
     });

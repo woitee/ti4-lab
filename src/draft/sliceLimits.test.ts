@@ -104,7 +104,7 @@ test("Nucleus uses configurable planet limits and quarter slice values", () => {
     },
   };
   for (let i = 0; i < 10; i++) {
-    const result = generateHeisenMap(settings, [...pool]);
+    const result = generateHeisenMap(settings, [...pool])!;
     expect(result.valid).toBe(true);
     for (const slice of result.slices) {
       const p = planets(slice);
