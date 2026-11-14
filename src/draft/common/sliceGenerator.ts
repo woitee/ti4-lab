@@ -290,6 +290,7 @@ export function coreGenerateSlices({
             slice,
             sliceShape,
             config.wormholePositions,
+            config.wormholesPerSlice,
           );
           t_slices[sliceIndex] = slice;
         }

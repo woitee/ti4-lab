@@ -60,7 +60,7 @@ const hexPoints = (cx: number, cy: number, r: number) =>
     return `${cx + r * Math.cos(a)},${cy + r * Math.sin(a)}`;
   }).join(" ");
 
-/** The slice as small hexes; click a position to allow/forbid wormholes there. */
+/** The slice as small hexes; click a position to select it for the wormhole. */
 function WormholePositions({
   formatType,
   value,
@@ -101,16 +101,16 @@ function WormholePositions({
       <polygon className={classes.posHome} points={hexPoints(0, 0, r - 1)} />
       {positions.map((pos, idx) => {
         const { px, py } = toPx(pos);
-        const allowed = value?.[idx] !== false;
-        const label = `${pos.label}: wormhole ${allowed ? "allowed" : "not allowed"}`;
+        const isSelected = value?.[idx] !== false;
+        const label = `${pos.label}: ${isSelected ? "selected" : "not selected"}`;
         return (
           <g
             key={pos.label}
             role="button"
             tabIndex={0}
-            aria-pressed={allowed}
+            aria-pressed={isSelected}
             aria-label={label}
-            className={cx(classes.pos, !allowed && classes.posOff)}
+            className={cx(classes.pos, !isSelected && classes.posOff)}
             onClick={() => toggle(idx)}
             onKeyDown={(e) => {
               if (e.key === "Enter" || e.key === " ") {
@@ -122,7 +122,7 @@ function WormholePositions({
             <title>{label}</title>
             <polygon points={hexPoints(px, py, r - 1)} />
             <text x={px} y={py}>
-              {allowed ? "✓" : "✕"}
+              {isSelected ? "✓" : ""}
             </text>
           </g>
         );
@@ -621,25 +621,27 @@ export function SliceSettingsModal({
                 options={WORMHOLES_PER_SLICE_OPTIONS}
               />
             </div>
-            <div className={cx(classes.mini, classes.miniWide)}>
-              <span className={classes.wtxt}>
-                <b>Wormhole positions</b>
-                <small>
-                  Click a tile to allow or forbid a wormhole there. Home is
-                  green.
-                </small>
-              </span>
-              <WormholePositions
-                formatType={formatType}
-                value={s.wormholePositions}
-                onChange={(v) =>
-                  setLocalSettings((prev) => ({
-                    ...prev,
-                    wormholePositions: v.every(Boolean) ? undefined : v,
-                  }))
-                }
-              />
-            </div>
+            {(s.wormholesPerSlice ?? "any") !== "any" && (
+              <div className={cx(classes.mini, classes.miniWide)}>
+                <span className={classes.wtxt}>
+                  <b>Wormhole positions</b>
+                  <small>
+                    The slice&apos;s wormhole sits on a selected tile. Home is
+                    green.
+                  </small>
+                </span>
+                <WormholePositions
+                  formatType={formatType}
+                  value={s.wormholePositions}
+                  onChange={(v) =>
+                    setLocalSettings((prev) => ({
+                      ...prev,
+                      wormholePositions: v.every(Boolean) ? undefined : v,
+                    }))
+                  }
+                />
+              </div>
+            )}
           </div>
 
           {!isDisabled("safePathToMecatol") && (

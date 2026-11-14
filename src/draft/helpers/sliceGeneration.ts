@@ -119,36 +119,41 @@ export const wormholesPerSliceOk = (
   return mode === "exactlyOne" ? count === 1 : count >= 1;
 };
 
-/** Whether no counted wormhole sits in a forbidden slice position. */
+/**
+ * Whether the slice's required wormhole sits on a selected position: with
+ * "at least 1" / "exactly 1" wormholes per slice, at least one counted
+ * wormhole must be on a selected position (others may be anywhere). With
+ * "any" the positions have no effect.
+ */
 export const wormholePositionsOk = (
   slice: SystemIds,
-  allowed: boolean[] | undefined,
+  selected: boolean[] | undefined,
+  mode: WormholesPerSlice | undefined,
 ) =>
-  !allowed ||
-  slice.every(
-    (id, idx) => allowed[idx] !== false || countedWormholes(systemData[id]) === 0,
+  !selected ||
+  !mode ||
+  mode === "any" ||
+  slice.some(
+    (id, idx) =>
+      selected[idx] !== false && countedWormholes(systemData[id]) > 0,
   );
 
 /**
- * Move counted wormholes out of forbidden positions by swapping them with
- * non-wormhole systems in allowed positions. Best effort: the result may
- * still break the rule when there aren't enough allowed positions.
+ * If no counted wormhole is on a selected position, swap one onto a
+ * selected position. Best effort: the slice may have no wormhole at all.
  */
-export function moveWormholesToAllowedPositions(
+export function moveWormholeToSelectedPosition(
   slice: SystemIds,
-  allowed: boolean[] | undefined,
+  selected: boolean[] | undefined,
+  mode: WormholesPerSlice | undefined,
 ): SystemIds {
   const result = [...slice];
-  if (!allowed) return result;
-  const isWormhole = (id: SystemId) => countedWormholes(systemData[id]) > 0;
-  result.forEach((id, idx) => {
-    if (allowed[idx] !== false || !isWormhole(id)) return;
-    const target = shuffle(result.map((_, j) => j)).find(
-      (j) => allowed[j] !== false && !isWormhole(result[j]),
-    );
-    if (target === undefined) return;
-    [result[idx], result[target]] = [result[target], result[idx]];
-  });
+  if (wormholePositionsOk(result, selected, mode)) return result;
+  const indices = shuffle(result.map((_, idx) => idx));
+  const from = indices.find((i) => countedWormholes(systemData[result[i]]) > 0);
+  const to = indices.find((i) => selected?.[i] !== false);
+  if (from === undefined || to === undefined) return result;
+  [result[from], result[to]] = [result[to], result[from]];
   return result;
 }
 
@@ -379,11 +384,12 @@ export function separateAnomalies(
   origSlice: SystemId[],
   shape: string[],
   wormholePositions?: boolean[],
+  wormholesPerSlice?: WormholesPerSlice,
 ) {
   let slice = [...origSlice]; // work with a copy
   const isGood = (candidate: SystemId[]) =>
     !sliceHasAdjacentAnomalies(candidate, shape) &&
-    wormholePositionsOk(candidate, wormholePositions);
+    wormholePositionsOk(candidate, wormholePositions, wormholesPerSlice);
 
   // First, shuffle a few times and see if we get a good setup.
   // Give up after a reasonable number of tries.
@@ -394,7 +400,7 @@ export function separateAnomalies(
 
   // No luck.  Walk through slice permutations and use the first good one.
   // (This always fixes the same way, hence a few random stabs before this.)
-  // If no order also keeps wormholes in allowed positions, settle for
+  // If no order also puts a wormhole on a selected position, settle for
   // separated anomalies; slice validation then rejects the slice.
   const goodSlice =
     permutator(slice, isGood) ??

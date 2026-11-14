@@ -23,8 +23,9 @@ export interface SliceGenerationSettings {
   /** Undefined = "any". */
   wormholesPerSlice?: WormholesPerSlice;
   /**
-   * Where a wormhole may be, per slice position (index order of
-   * SLICE_POSITIONS); false = forbidden, missing = allowed.
+   * Where the wormhole required by wormholesPerSlice must be, per slice
+   * position (index order of SLICE_POSITIONS); false = not selected,
+   * missing = selected. Ignored when wormholesPerSlice is "any".
    */
   wormholePositions?: boolean[];
 

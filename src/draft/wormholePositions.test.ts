@@ -6,36 +6,57 @@ import { generateSlices as generateMiltyEqSlices } from "~/draft/miltyeq/sliceGe
 import { generateMap as generateHeisenMap } from "~/draft/heisen/generateMap";
 import {
   countedWormholes,
-  moveWormholesToAllowedPositions,
+  moveWormholeToSelectedPosition,
   wormholePositionsOk,
 } from "~/draft/helpers/sliceGeneration";
 import { getSystemPool } from "~/utils/system";
 import { systemData } from "~/data/systemData";
 import type { DraftSettings, SystemIds } from "~/types";
-import type { DraftType } from "~/draft/types";
+import type { DraftType, WormholesPerSlice } from "~/draft/types";
 
 const basePok = getSystemPool(["base", "pok"]);
+// Thunder's Edge adds wormholes, enough for one in each of 7 slices.
+const basePokTe = getSystemPool(["base", "pok", "te"]);
 
 /** Indices of the slice positions holding a counted wormhole. */
 const wormholeIndices = (slice: SystemIds) =>
   slice.flatMap((id, idx) => (countedWormholes(systemData[id]) > 0 ? [idx] : []));
 
-const expectOnlyAllowed = (slices: SystemIds[], allowed: boolean[]) => {
-  for (const slice of slices)
-    for (const idx of wormholeIndices(slice)) expect(allowed[idx]).not.toBe(false);
+/** Every slice has a wormhole on a selected position (and, for exactly 1, no other). */
+const expectRequiredOnSelected = (
+  slices: SystemIds[],
+  selected: boolean[],
+  mode: WormholesPerSlice,
+) => {
+  for (const slice of slices) {
+    const indices = wormholeIndices(slice);
+    expect(indices.some((idx) => selected[idx] !== false)).toBe(true);
+    if (mode === "exactlyOne") expect(indices).toHaveLength(1);
+  }
 };
 
-test("mask check: forbidden positions, supernova and missing entries", () => {
-  // 26 = Lodor (alpha), 4276 = alpha + beta in a supernova, 19 = plain planet.
-  expect(wormholePositionsOk(["26", "19", "19"], [false, true, true])).toBe(false);
-  expect(wormholePositionsOk(["19", "26", "19"], [false, true, true])).toBe(true);
-  expect(wormholePositionsOk(["4276", "19"], [false, false])).toBe(true);
-  expect(wormholePositionsOk(["19", "26"], [false])).toBe(true); // missing = allowed
-  expect(wormholePositionsOk(["26"], undefined)).toBe(true);
+// 26 = Lodor (alpha), 40 = empty beta, 4276 = alpha + beta in a supernova,
+// 19 = plain planet.
+test("rule: one wormhole on a selected position, others anywhere", () => {
+  const frontAndRight = [false, true, true];
+  // At least 1: a second wormhole on an unselected position is fine.
+  expect(wormholePositionsOk(["26", "40", "19"], frontAndRight, "atLeastOne")).toBe(true);
+  expect(wormholePositionsOk(["26", "19", "19"], frontAndRight, "atLeastOne")).toBe(false);
+  // Exactly 1: the one wormhole must be on a selected position.
+  expect(wormholePositionsOk(["19", "26", "19"], frontAndRight, "exactlyOne")).toBe(true);
+  expect(wormholePositionsOk(["26", "19", "19"], frontAndRight, "exactlyOne")).toBe(false);
+  // Any (or unset): positions are ignored.
+  expect(wormholePositionsOk(["26", "19", "19"], frontAndRight, "any")).toBe(true);
+  expect(wormholePositionsOk(["26", "19", "19"], frontAndRight, undefined)).toBe(true);
+  // A wormhole in a supernova doesn't count; missing entries are selected.
+  expect(wormholePositionsOk(["19", "4276"], [false, true], "atLeastOne")).toBe(false);
+  expect(wormholePositionsOk(["19", "26"], [false], "atLeastOne")).toBe(true);
+  expect(wormholePositionsOk(["26"], undefined, "exactlyOne")).toBe(true);
 
-  const moved = moveWormholesToAllowedPositions(["26", "19", "20"], [false, false, true]);
+  const moved = moveWormholeToSelectedPosition(["26", "19", "20"], [false, false, true], "atLeastOne");
   expect(moved[2]).toBe("26");
   expect([...moved].sort()).toEqual(["19", "20", "26"]);
+  expect(moveWormholeToSelectedPosition(["26", "19", "20"], [false, false, true], "any")).toEqual(["26", "19", "20"]);
 });
 
 test("positions in the settings match the order the drafts place slice tiles", () => {
@@ -54,24 +75,52 @@ test("positions in the settings match the order the drafts place slice tiles", (
   }
 });
 
-// Typical use: no wormhole next to the home system.
+const miltyConfig = (
+  mode: WormholesPerSlice,
+  wormholePositions: boolean[],
+  type: DraftType = "milty",
+) => ({
+  numAlphas: 2,
+  numBetas: 2,
+  minLegendaries: 1,
+  wormholesPerSlice: mode,
+  wormholePositions,
+  mecatolPathSystemIndices: draftConfig[type].mecatolPathSystemIndices,
+});
+
+// Typical use: the wormhole not next to the home system.
 const notNextToHome = [false, false, false, true, true];
 
-test("Milty keeps wormholes out of forbidden positions", () => {
+test("Milty: exactly 1, on a selected position", () => {
   for (let i = 0; i < 10; i++) {
-    const slices = generateMiltySlices(6, [...basePok], {
-      numAlphas: 2,
-      numBetas: 2,
-      minLegendaries: 1,
-      wormholePositions: notNextToHome,
-      mecatolPathSystemIndices: draftConfig.milty.mecatolPathSystemIndices,
-    });
+    const slices = generateMiltySlices(6, [...basePok], miltyConfig("exactlyOne", notNextToHome));
     expect(slices).toBeDefined();
-    expectOnlyAllowed(slices!, notNextToHome);
+    expectRequiredOnSelected(slices!, notNextToHome, "exactlyOne");
   }
 }, 60_000);
 
-test("7p Milty and Milty EQ apply the mask by role, also to the pushed-forward seat", () => {
+test("Milty: at least 1 on a selected position", () => {
+  const frontFar = [false, false, false, false, true];
+  for (let i = 0; i < 10; i++) {
+    const slices = generateMiltySlices(6, [...basePok], miltyConfig("atLeastOne", frontFar));
+    expect(slices).toBeDefined();
+    expectRequiredOnSelected(slices!, frontFar, "atLeastOne");
+  }
+}, 60_000);
+
+test("Milty: with any, the positions are ignored", () => {
+  const nothingSelected = [false, false, false, false, false];
+  const indices = new Set<number>();
+  for (let i = 0; i < 10; i++) {
+    const slices = generateMiltySlices(6, [...basePok], miltyConfig("any", nothingSelected));
+    expect(slices).toBeDefined();
+    slices!.forEach((slice) => wormholeIndices(slice).forEach((idx) => indices.add(idx)));
+  }
+  // Wormholes still land on the (unselected) positions next to home.
+  expect([...indices].some((idx) => idx < 3)).toBe(true);
+}, 60_000);
+
+test("7p Milty and Milty EQ apply the positions by role, also to the pushed-forward seat", () => {
   // The pushed-forward seat places slice tiles in the same role order
   // (left, front, right, ...), only on different hexes.
   for (const type of ["milty7p", "miltyeq7p"] as const) {
@@ -82,32 +131,28 @@ test("7p Milty and Milty EQ apply the mask by role, also to the pushed-forward s
     expect(pushedSeat).toHaveLength(config.numSystemsInSlice);
   }
 
-  const eqMask = [false, false, false, true];
+  const eqFrontFar = [false, false, false, true];
   for (let i = 0; i < 5; i++) {
-    const milty = generateMiltySlices(7, [...basePok], {
-      numAlphas: 2,
-      numBetas: 2,
-      minLegendaries: 1,
-      wormholePositions: notNextToHome,
-      mecatolPathSystemIndices: draftConfig.milty7p.mecatolPathSystemIndices,
-    });
+    const milty = generateMiltySlices(
+      7,
+      [...basePokTe],
+      miltyConfig("exactlyOne", notNextToHome, "milty7p"),
+    );
     expect(milty).toBeDefined();
-    expectOnlyAllowed(milty!, notNextToHome);
+    expectRequiredOnSelected(milty!, notNextToHome, "exactlyOne");
 
-    const eq = generateMiltyEqSlices(7, [...basePok], {
-      numAlphas: 2,
-      numBetas: 2,
-      minLegendaries: 1,
-      wormholePositions: eqMask,
-      mecatolPathSystemIndices: draftConfig.miltyeq7p.mecatolPathSystemIndices,
-    });
+    const eq = generateMiltyEqSlices(
+      7,
+      [...basePokTe],
+      miltyConfig("atLeastOne", eqFrontFar, "miltyeq7p"),
+    );
     expect(eq).toBeDefined();
-    expectOnlyAllowed(eq!, eqMask);
+    expectRequiredOnSelected(eq!, eqFrontFar, "atLeastOne");
   }
 }, 60_000);
 
-test("Nucleus keeps wormholes out of forbidden positions", () => {
-  const settings = (wormholePositions: boolean[]): DraftSettings => ({
+test("Nucleus: the required wormhole on a selected position", () => {
+  const settings = (mode: WormholesPerSlice): DraftSettings => ({
     type: "heisen",
     factionGameSets: ["base", "pok"],
     tileGameSets: ["base", "pok"],
@@ -122,28 +167,26 @@ test("Nucleus keeps wormholes out of forbidden positions", () => {
     numMinorFactions: 0,
     minorFactionsInSharedPool: false,
     sliceGenerationConfig: {
-      wormholesPerSlice: "atLeastOne",
-      wormholePositions,
+      wormholesPerSlice: mode,
+      // Only the front position (toward Mecatol).
+      wormholePositions: [false, true, false],
       mecatolPathSystemIndices: draftConfig.heisen.mecatolPathSystemIndices,
     },
   });
-  // Only the front position (toward Mecatol) may hold the wormhole.
-  for (let i = 0; i < 10; i++) {
-    const result = generateHeisenMap(settings([false, true, false]), [...basePok]);
-    expect(result.valid).toBe(true);
-    for (const slice of result.slices) expect(wormholeIndices(slice)).toEqual([1]);
+  for (const mode of ["atLeastOne", "exactlyOne"] as const) {
+    for (let i = 0; i < 5; i++) {
+      const result = generateHeisenMap(settings(mode), [...basePok]);
+      expect(result.valid).toBe(true);
+      expectRequiredOnSelected(result.slices, [false, true, false], mode);
+    }
   }
 }, 60_000);
 
-test("an impossible mask fails like other impossible settings", () => {
-  // Every slice needs a wormhole, but no position may hold one.
-  const slices = generateMiltySlices(6, [...basePok], {
-    numAlphas: 0,
-    numBetas: 0,
-    minLegendaries: 0,
-    wormholesPerSlice: "atLeastOne",
-    wormholePositions: [false, false, false, false, false],
-    mecatolPathSystemIndices: draftConfig.milty.mecatolPathSystemIndices,
-  });
+test("no selected position fails like other impossible settings", () => {
+  const slices = generateMiltySlices(
+    6,
+    [...basePok],
+    miltyConfig("atLeastOne", [false, false, false, false, false]),
+  );
   expect(slices).toBeUndefined();
 }, 60_000);

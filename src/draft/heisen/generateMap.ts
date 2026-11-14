@@ -13,7 +13,7 @@ import {
   countedWormholes,
   fillSlicesWithRemainingTiles,
   fillSlicesWithRequiredTiles,
-  moveWormholesToAllowedPositions,
+  moveWormholeToSelectedPosition,
   wormholePositionsOk,
   wormholesPerSliceOk,
 } from "../helpers/sliceGeneration";
@@ -381,7 +381,7 @@ function tryGenerateMap(
         wormholesPerSliceOk(
           slice.map((id) => systemData[id]),
           wormholesPerSlice,
-        ) && wormholePositionsOk(slice, wormholePositions),
+        ) && wormholePositionsOk(slice, wormholePositions, wormholesPerSlice),
     )
   ) {
     return undefined;
@@ -766,15 +766,11 @@ export function generateSlices(
     tieredSlices[sliceIdx][tileIdx === -1 ? 0 : tileIdx] = "resolved";
     slices[sliceIdx].push(id);
   });
-  // No further wormholes when each slice already has its one, or when no
-  // slice position may hold a wormhole.
-  const noMoreWormholes =
-    config.wormholesPerSlice === "exactlyOne" ||
-    [0, 1, 2].every((idx) => config.wormholePositions?.[idx] === false);
   const slicePool = availableSystems.filter(
     (id) =>
       !perSliceWormholes.includes(id) &&
-      (!noMoreWormholes || countedWormholes(systemData[id]) === 0),
+      (config.wormholesPerSlice !== "exactlyOne" ||
+        countedWormholes(systemData[id]) === 0),
   );
 
   // Enforce a minimum number of wormholes and legendary planets
@@ -799,9 +795,13 @@ export function generateSlices(
     config?.sliceValueModifiers,
   );
 
-  // shuffle the slices, keeping wormholes out of forbidden positions
+  // shuffle the slices, with the required wormhole on a selected position
   return slices.map((slice) =>
-    moveWormholesToAllowedPositions(shuffle(slice), config.wormholePositions),
+    moveWormholeToSelectedPosition(
+      shuffle(slice),
+      config.wormholePositions,
+      config.wormholesPerSlice,
+    ),
   );
 }
 

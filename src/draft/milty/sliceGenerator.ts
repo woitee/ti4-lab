@@ -99,7 +99,14 @@ export function generateSlices(
     if (!planetCountInRange(systems, config.minPlanets, config.maxPlanets))
       return false;
     if (!wormholesPerSliceOk(systems, config.wormholesPerSlice)) return false;
-    if (!wormholePositionsOk(slice, config.wormholePositions)) return false;
+    if (
+      !wormholePositionsOk(
+        slice,
+        config.wormholePositions,
+        config.wormholesPerSlice,
+      )
+    )
+      return false;
     return true;
   };
 
