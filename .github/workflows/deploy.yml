@@ -1,0 +1,86 @@
+name: Deploy to ti4.woitee.cz
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-ti4
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  DEPLOY_HOST: 46.28.109.52
+  DEPLOY_USER: ti4lab
+  # vm30017 SSH host key (ed25519), pinned instead of disabling host key checking
+  DEPLOY_KNOWN_HOST: "46.28.109.52 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIH8vv3lc+rbvsbuCclj28A62xjDUR3jIH5TfTv0n4woy"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+
+      - name: Set up SSH
+        env:
+          DEPLOY_KEY: ${{ secrets.VM30017_DEPLOY_KEY }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$DEPLOY_KNOWN_HOST" > ~/.ssh/known_hosts
+          echo "SSH_CMD=ssh -i $HOME/.ssh/deploy_key -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes $DEPLOY_USER@$DEPLOY_HOST" >> "$GITHUB_ENV"
+
+      - name: Check what is deployed
+        id: status
+        run: |
+          out=$($SSH_CMD status)
+          read -r deployed_sha deployed_deps <<< "$out"
+          deps=$(cat package.json yarn.lock | sha256sum | cut -d' ' -f1)
+          echo "deployed=$deployed_sha deps=$deployed_deps; this=$GITHUB_SHA deps=$deps"
+          echo "deps_hash=$deps" >> "$GITHUB_OUTPUT"
+          if [ "$deps" != "$deployed_deps" ]; then echo "ship_deps=true" >> "$GITHUB_OUTPUT"; else echo "ship_deps=false" >> "$GITHUB_OUTPUT"; fi
+
+      - name: Build
+        run: |
+          yarn install --frozen-lockfile --network-timeout=120000
+          yarn run build
+
+      - name: Production node_modules (only when package.json / yarn.lock changed)
+        if: steps.status.outputs.ship_deps == 'true'
+        run: |
+          mkdir -p /tmp/prod
+          cp package.json yarn.lock /tmp/prod/
+          cd /tmp/prod
+          yarn install --frozen-lockfile --production --network-timeout=120000
+          echo "${{ steps.status.outputs.deps_hash }}" > node_modules/.deps-hash
+
+      - name: Package
+        run: |
+          if [ "${{ steps.status.outputs.ship_deps }}" = "true" ]; then
+            tar -czf /tmp/artifact.tgz dist -C /tmp/prod node_modules
+          else
+            tar -czf /tmp/artifact.tgz dist
+          fi
+          ls -lh /tmp/artifact.tgz
+
+      - name: Deploy
+        run: $SSH_CMD deploy "$GITHUB_SHA" < /tmp/artifact.tgz
+
+      - name: Verify
+        run: |
+          curl -fsS -m 20 https://ti4.woitee.cz/health
+          [ "$($SSH_CMD status | cut -d' ' -f1)" = "$GITHUB_SHA" ]
+
+      - name: Clean up key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key
