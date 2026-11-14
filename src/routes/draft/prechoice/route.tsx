@@ -3,6 +3,7 @@ import { createFileRoute, useLocation } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { DemoMap } from "~/components/DemoMap";
 import {
+  IconArrowBackUp,
   IconBrandDiscordFilled,
   IconFile,
   IconInfoCircle,
@@ -34,7 +35,11 @@ import { SlicesConfigurationSection } from "./-components/SlicesConfigurationSec
 import { KingsConfigurationSection } from "./-components/KingsConfigurationSection";
 import { DraftConfigurationPanel } from "./-components/DraftConfigurationPanel";
 import { PlayerInputSection } from "~/routes/draft/new/-components/PlayerInputSection";
-import { useDraftSettingsBuilder, useDraftNavigation } from "./-hooks";
+import {
+  useDraftSettingsBuilder,
+  useDraftNavigation,
+  useRememberedSetup,
+} from "./-hooks";
 import { buildInitialTexasDraft } from "~/draft/buildInitialDraft";
 import {
   getTexasSlotCounts,
@@ -137,6 +142,13 @@ function DraftPrechoice() {
 
   const [activeSettingsFormat, setActiveSettingsFormat] =
     useState<SliceSettingsFormatType>("milty");
+
+  // Before the Discord / seeded map effects below, so those win.
+  const { resetToDefaults } = useRememberedSetup(
+    sliceSettings,
+    setSliceSettings,
+    !!returnedSliceSettings,
+  );
 
   // Initialize players from Discord data if available
   const discordDataInitialized = useRef(false);
@@ -513,7 +525,17 @@ function DraftPrechoice() {
             />
 
             <section className={classes.sec}>
-              <SectionHeader title="Configuration" />
+              <SectionHeader title="Configuration">
+                <Button
+                  variant="tertiary"
+                  size="sm"
+                  icon={<IconArrowBackUp size={14} />}
+                  onClick={resetToDefaults}
+                  title="Your setup is remembered in this browser. This forgets it and restores the defaults (player names stay)."
+                >
+                  Reset to defaults
+                </Button>
+              </SectionHeader>
               <Segmented<DraftMode>
                 label="Draft mode"
                 block

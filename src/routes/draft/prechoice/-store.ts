@@ -21,6 +21,7 @@ import {
   type FactionNotification,
 } from "./-validation";
 import { filterFactionList, getMaxAvailableSlices } from "./-utils";
+import type { RememberedSetup } from "./-persist";
 
 type ContentFlags = {
   // Base game
@@ -63,6 +64,8 @@ type DraftSetupStore = {
   draftMode: DraftMode;
   setDraftMode: (mode: DraftMode) => void;
   validateSetup: () => void;
+  /** Applies remembered settings (see -persist.ts); keeps player names. */
+  restoreRememberedSetup: (setup: RememberedSetup) => void;
   player: {
     players: Player[];
     add: () => void;
@@ -309,6 +312,28 @@ export const useDraftSetup = create<DraftSetupStore>()(
 
         applyFactionValidation();
       },
+
+      restoreRememberedSetup: (setup: RememberedSetup) =>
+        setAndValidate((state) => {
+          state.draftMode = setup.draftMode;
+          state.player.players = Array.from(
+            { length: setup.playerCount },
+            (_, i) => state.player.players[i] ?? { id: i, name: "" },
+          );
+          if (setup.selectedMapType in MAPS) {
+            state.map.selectedMapType =
+              setup.selectedMapType as ChoosableDraftType;
+          }
+          state.slices.numSlices = setup.numSlices;
+          state.referenceCardPacks.numReferenceCardPacks =
+            setup.numReferenceCardPacks;
+          state.kings.numKings = setup.numKings;
+          Object.assign(state.texas, setup.texas);
+          Object.assign(state.content.flags, setup.contentFlags);
+          Object.assign(state.format, setup.format);
+          Object.assign(state.multidraft, setup.multidraft);
+          Object.assign(state.faction, setup.faction);
+        }),
 
       player: {
         players: Array(6)
@@ -895,4 +920,47 @@ export const useDraftSetup = create<DraftSetupStore>()(
       },
     };
   }),
+);
+
+/** The part of the setup that's remembered in the browser (see -persist.ts). */
+export function rememberedSetupOf(state: DraftSetupStore): RememberedSetup {
+  const { texas, format, multidraft, faction } = state;
+  return {
+    draftMode: state.draftMode,
+    playerCount: state.player.players.length,
+    selectedMapType: state.map.selectedMapType,
+    numSlices: state.slices.numSlices,
+    numReferenceCardPacks: state.referenceCardPacks.numReferenceCardPacks,
+    numKings: state.kings.numKings,
+    texas: {
+      factionHandSize: texas.factionHandSize,
+      allowRedraw: texas.allowRedraw,
+    },
+    contentFlags: { ...state.content.flags },
+    format: {
+      draftSpeaker: format.draftSpeaker,
+      banFactions: format.banFactions,
+      draftPlayerColors: format.draftPlayerColors,
+      allowEmptyTiles: format.allowEmptyTiles,
+      allowHomePlanetSearch: format.allowHomePlanetSearch,
+      showMonumentImagesInFactionInfo: format.showMonumentImagesInFactionInfo,
+    },
+    multidraft: {
+      isMultidraft: multidraft.isMultidraft,
+      numDrafts: multidraft.numDrafts,
+    },
+    faction: {
+      numFactions: faction.numFactions,
+      minorFactionsMode: faction.minorFactionsMode,
+      preassignedFactions: faction.preassignedFactions,
+      allowedFactions: faction.allowedFactions,
+      requiredFactions: faction.requiredFactions,
+      stratifiedConfig: faction.stratifiedConfig,
+    },
+  };
+}
+
+/** The setup a first-time visitor starts with. */
+export const DEFAULT_REMEMBERED_SETUP = rememberedSetupOf(
+  useDraftSetup.getInitialState(),
 );

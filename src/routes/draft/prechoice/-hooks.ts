@@ -5,7 +5,20 @@ import type {
   SliceGenerationSettings,
   SliceSettingsFormatType,
 } from "~/draft/sliceSettings";
-import { useDraftSetup } from "./-store";
+import { useEffect, useState } from "react";
+import { DEFAULT_SLICE_SETTINGS } from "~/draft/sliceSettings";
+import {
+  DEFAULT_REMEMBERED_SETUP,
+  rememberedSetupOf,
+  useDraftSetup,
+} from "./-store";
+import {
+  clearRememberedState,
+  readRememberedState,
+  writeRememberedState,
+  type RememberedState,
+  type SliceSettingsByFormat,
+} from "./-persist";
 import { buildSliceGenerationConfig } from "./-utils";
 import { decodeSeededMapData } from "~/mapgen/utils/mapToDraft";
 import { createMultiDraft } from "~/server/drafts.functions";
@@ -165,4 +178,56 @@ export const useDraftNavigation = (discordData?: DiscordData) => {
   };
 
   return { navigateToDraft };
+};
+
+const REMEMBERED_DEFAULTS: RememberedState = {
+  setup: DEFAULT_REMEMBERED_SETUP,
+  sliceSettings: DEFAULT_SLICE_SETTINGS,
+};
+
+/**
+ * Restores the setup remembered in this browser after mount (so server and
+ * client render the same defaults first), then saves every change.
+ * Returns a function that forgets the remembered setup and resets to defaults.
+ */
+export const useRememberedSetup = (
+  sliceSettings: SliceSettingsByFormat,
+  setSliceSettings: (settings: SliceSettingsByFormat) => void,
+  /** Slice settings handed back from a failed attempt win over storage. */
+  keepSliceSettings: boolean,
+) => {
+  const [restored, setRestored] = useState(false);
+
+  useEffect(() => {
+    const saved = readRememberedState(REMEMBERED_DEFAULTS);
+    if (saved) {
+      useDraftSetup.getState().restoreRememberedSetup(saved.setup);
+      if (!keepSliceSettings) setSliceSettings(saved.sliceSettings);
+    }
+    setRestored(true);
+    // Mount only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!restored) return;
+    const save = () =>
+      writeRememberedState(
+        {
+          setup: rememberedSetupOf(useDraftSetup.getState()),
+          sliceSettings,
+        },
+        REMEMBERED_DEFAULTS,
+      );
+    save();
+    return useDraftSetup.subscribe(save);
+  }, [restored, sliceSettings]);
+
+  const resetToDefaults = () => {
+    clearRememberedState();
+    useDraftSetup.getState().restoreRememberedSetup(DEFAULT_REMEMBERED_SETUP);
+    setSliceSettings(DEFAULT_SLICE_SETTINGS);
+  };
+
+  return { resetToDefaults };
 };
