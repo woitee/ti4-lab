@@ -156,8 +156,7 @@ export function generateSlices(
       minAlphas: config.numAlphas ?? 2,
       minBetas: config.numBetas ?? 2,
       minLegendaries: config.minLegendaries ?? 1,
-      // The map check caps legendaries at 3 when unset; match it here.
-      maxLegendaries: config.maxLegendaries ?? 3,
+      maxLegendaries: config.maxLegendaries,
       safePath: config.safePathToMecatol,
       safeCenter: config.centerTileNotEmpty,
       highAdjacent: config.highQualityAdjacent,

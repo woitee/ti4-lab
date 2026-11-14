@@ -368,3 +368,41 @@ describe("max planets of one trait", () => {
     expect(describeSliceSearchFailure(failure).lines[0]).toMatch(/at most 1 planet of one trait/);
   }, 30_000);
 });
+
+describe("max legendary planets off", () => {
+  const legendaries = (slices: SystemIds[]) =>
+    slices.flat().filter((id) => systemData[id].planets.some((p) => p.legendary)).length;
+
+  test.each(["milty", "miltyeq"] as const)("%s: min 4 with max off is possible (no hidden cap of 3)", (type) => {
+    const sliceGenerationConfig: SliceGenerationConfig =
+      type === "milty"
+        ? miltyConfig(9, 13, { minLegendaries: 4, maxLegendaries: undefined })
+        : {
+            ...miltyConfig(6, 10, { minLegendaries: 4, maxLegendaries: undefined }),
+            minOptimalInfluence: 3,
+            minOptimalResources: 2,
+            mecatolPathSystemIndices: EQ_PATH,
+          };
+    const settings: DraftSettings = { ...nucleusSettings({}), type, sliceGenerationConfig };
+    for (let i = 0; i < 5; i++) {
+      const result = draftConfig[type].generateMap!(settings, [...pool]);
+      expect(result).toBeDefined();
+      expect(legendaries(result!.slices)).toBeGreaterThanOrEqual(4);
+    }
+  }, 60_000);
+
+  test("max 3 still caps, and a short pool says how many it has", () => {
+    takeSliceSearchFailure();
+    expect(
+      generateMiltySlices(6, [...pool], miltyConfig(9, 13, { minLegendaries: 4, maxLegendaries: 3 })),
+    ).toBeUndefined();
+    takeSliceSearchFailure();
+    // Base + PoK have 2 legendary planets.
+    expect(
+      generateMiltySlices(6, getSystemPool(["base", "pok"]), miltyConfig(9, 13, { minLegendaries: 4, maxLegendaries: undefined })),
+    ).toBeUndefined();
+    expect(takeSliceSearchFailure()?.problems.join(" ")).toMatch(
+      /fewer than 4 legendary planets in the slices \(the selected tiles have 2\)/,
+    );
+  }, 30_000);
+});

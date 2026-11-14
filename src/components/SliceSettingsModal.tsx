@@ -152,7 +152,7 @@ type CountProps = {
   value: number | undefined;
   onChange: (property: CountKey, value: number | undefined) => void;
   defaultValue?: number;
-  /** Stepping below 1 switches the limit off. */
+  /** Stepping below 1 (or below minValue) switches the limit off. */
   allowUndefined?: boolean;
   minValue?: number;
 };
@@ -171,7 +171,9 @@ function Count({
     if (value === undefined) return;
 
     if (minValue !== undefined) {
-      onChange(property, Math.max(minValue, value - 1));
+      // A limit that can be off switches off when stepped below its floor.
+      if (value - 1 < minValue && allowUndefined) onChange(property, undefined);
+      else onChange(property, Math.max(minValue, value - 1));
       return;
     }
 
@@ -193,7 +195,7 @@ function Count({
 
   const decreaseDisabled =
     value === undefined ||
-    (minValue !== undefined && value <= minValue) ||
+    (minValue !== undefined && value <= minValue && !allowUndefined) ||
     (!allowUndefined && value <= 0);
 
   return (

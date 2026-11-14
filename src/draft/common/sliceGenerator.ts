@@ -249,8 +249,8 @@ const mapProblems = (
     numTilesAvailable(config) * RED_TILE_RATIO,
   );
 
-  // Use maxLegendaries from config if set, otherwise use default of 3
-  const maxLegendaries = settings.sliceGenerationConfig?.maxLegendaries ?? 3;
+  // Unset ("off") means no limit.
+  const maxLegendaries = settings.sliceGenerationConfig?.maxLegendaries;
 
   const chosenMapLocations = map.reduce(
     (acc, tile) => {
@@ -266,7 +266,7 @@ const mapProblems = (
       `the map is short of red tiles (needs ${redTilesRequired}, got ${stats.redTiles})`,
     );
   }
-  if (stats.totalLegendary > maxLegendaries) {
+  if (maxLegendaries !== undefined && stats.totalLegendary > maxLegendaries) {
     problems.push(
       `too many legendary planets (at most ${maxLegendaries}, got ${stats.totalLegendary})`,
     );

@@ -739,6 +739,13 @@ class Search {
     return v;
   }
 
+  /** Usable pool tiles matching f. */
+  private poolCount(f: (t: TileInfo) => boolean) {
+    return Object.values(this.byTier)
+      .flat()
+      .filter((t) => f(this.tiles[t])).length;
+  }
+
   /** What the given slices still get wrong. */
   describeProblems(slices: SystemIds[]): string[] {
     const L = this.spec.limits;
@@ -812,7 +819,7 @@ class Search {
     if ((L.minAlphas ?? 0) > count((t) => t.alpha)) problems.push(`fewer than ${plural(L.minAlphas!, "alpha wormhole")} in the slices`);
     if ((L.minBetas ?? 0) > count((t) => t.beta)) problems.push(`fewer than ${plural(L.minBetas!, "beta wormhole")} in the slices`);
     const legendaries = count((t) => t.legendary);
-    if ((L.minLegendaries ?? 0) > legendaries) problems.push(`fewer than ${plural(L.minLegendaries!, "legendary planet")} in the slices`);
+    if ((L.minLegendaries ?? 0) > legendaries) problems.push(`fewer than ${plural(L.minLegendaries!, "legendary planet")} in the slices (the selected tiles have ${this.poolCount((t) => t.legendary)})`);
     if (L.maxLegendaries !== undefined && legendaries > L.maxLegendaries)
       problems.push(`more than ${plural(L.maxLegendaries, "legendary planet")} in the slices`);
     const quality: [number | undefined, number, string][] = [
