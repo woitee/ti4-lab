@@ -570,7 +570,7 @@ function DraftPrechoice() {
                   onClick={resetToDefaults}
                   title="Your setup is remembered in this browser. This forgets it and restores the defaults (player names stay)."
                 >
-                  Reset to defaults
+                  Reset setup
                 </Button>
               </SectionHeader>
               <Segmented<DraftMode>
