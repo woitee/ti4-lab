@@ -22,7 +22,11 @@ export type NewDraftHandoff =
       discordData?: DiscordData;
       setupSliceSettings?: SetupSliceSettings;
     }
-  | { savedDraftState: Draft };
+  | {
+      savedDraftState: Draft;
+      /** The preset's fixed factions gave way to the setup's ban phase. */
+      droppedFixedFactions?: boolean;
+    };
 
 declare module "@tanstack/react-router" {
   interface HistoryState {

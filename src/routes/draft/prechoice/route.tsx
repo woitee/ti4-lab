@@ -52,7 +52,10 @@ import { ContinueFromPresetModal } from "./-components/ContinueFromPresetModal";
 import { BrowsePresetsModal } from "./-components/BrowsePresetsModal";
 import { playersFromDiscordData } from "~/utils/discordPlayers";
 import type { DraftPreset } from "~/drizzle/draftPreset.server";
-import { presetPlayerCountError } from "~/utils/draftPreset";
+import {
+  applySetupDraftRules,
+  presetPlayerCountError,
+} from "~/utils/draftPreset";
 import { MapStyleSelector } from "./-components/MapStyleSelector";
 import { SeededMapBanner } from "./-components/SeededMapBanner";
 import { decodeSeededMapData } from "~/mapgen/utils/mapToDraft";
@@ -349,12 +352,20 @@ function DraftPrechoice() {
         },
     );
 
+    // The setup page's draft rules replace the preset's own.
+    const { data, droppedFixedFactions } = applySetupDraftRules(
+      preset.data,
+      format,
+      preset.keepFactions,
+    );
+
     navigate({
       to: "/draft/new",
       state: {
         newDraft: {
+          droppedFixedFactions,
           savedDraftState: {
-            ...preset.data,
+            ...data,
             integrations: { discord: discordData },
             players: adjustedPlayers,
             selections: [],

@@ -25,7 +25,7 @@ import { SaveDraftPresetModal, SaveToHubModal } from "./-components/SaveDraftPre
 import { BuilderSection } from "./-sections/BuilderSection";
 import { MAPS } from "~/routes/draft/prechoice/-maps";
 import { takeSliceSearchFailure } from "~/draft/common/sliceSearch";
-import { Button, Code, Heading, Text, useDisclosure } from "~/ui";
+import { Button, Code, Heading, Notice, Text, useDisclosure } from "~/ui";
 import classes from "./route.module.css";
 
 export const Route = createFileRoute("/draft/new")({
@@ -185,6 +185,9 @@ function DraftNew() {
       ? "Twilight's Fall"
       : (MAPS[draft.settings.type]?.title ?? draft.settings.type);
 
+  const droppedFixedFactions =
+    handoff && "savedDraftState" in handoff && handoff.droppedFixedFactions;
+
   const header = (
     <header className={classes.head}>
       <div className={classes.headText}>
@@ -195,6 +198,12 @@ function DraftNew() {
           {formatName}, {draft.players.length} players. Reroll, edit or remove
           anything, then create the draft.
         </Text>
+        {droppedFixedFactions && (
+          <Notice tone="info" title="Factions rolled after bans">
+            This preset had a fixed faction pool, but the ban phase is on, so
+            factions are rolled after the bans instead.
+          </Notice>
+        )}
       </div>
       {!isPresetMapDraft && <OriginalArtToggle showWarning={true} />}
     </header>
