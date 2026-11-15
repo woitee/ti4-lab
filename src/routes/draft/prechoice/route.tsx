@@ -352,11 +352,20 @@ function DraftPrechoice() {
         },
     );
 
-    // The setup page's draft rules replace the preset's own.
+    // On "Base draft", where the "Draft rules" block is shown, the setup
+    // page's draft rules replace the preset's own.
     const { data, droppedFixedFactions } = applySetupDraftRules(
       preset.data,
-      format,
+      draftMode === "base"
+        ? {
+            banFactions: format.banFactions,
+            draftSpeaker: format.draftSpeaker,
+            draftPlayerColors: format.draftPlayerColors,
+            preassignedFactions: faction.preassignedFactions,
+          }
+        : undefined,
       preset.keepFactions,
+      preset.playerCount,
     );
 
     navigate({

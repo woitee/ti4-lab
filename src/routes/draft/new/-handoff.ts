@@ -1,4 +1,5 @@
 import type { DiscordData, Draft, DraftSettings, Player } from "~/types";
+import type { DroppedFixedFactions } from "~/utils/draftPreset";
 import type { SliceSearchFailure } from "~/draft/common/sliceSearch";
 import type {
   SliceGenerationSettings,
@@ -24,8 +25,8 @@ export type NewDraftHandoff =
     }
   | {
       savedDraftState: Draft;
-      /** The preset's fixed factions gave way to the setup's ban phase. */
-      droppedFixedFactions?: boolean;
+      /** The preset's fixed factions gave way to the setup's ban phase or bags. */
+      droppedFixedFactions?: DroppedFixedFactions;
     };
 
 declare module "@tanstack/react-router" {

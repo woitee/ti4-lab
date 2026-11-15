@@ -199,9 +199,17 @@ function DraftNew() {
           anything, then create the draft.
         </Text>
         {droppedFixedFactions && (
-          <Notice tone="info" title="Factions rolled after bans">
-            This preset had a fixed faction pool, but the ban phase is on, so
-            factions are rolled after the bans instead.
+          <Notice
+            tone="info"
+            title={
+              droppedFixedFactions === "ban"
+                ? "Factions rolled after bans"
+                : "Factions re-rolled for faction bags"
+            }
+          >
+            {droppedFixedFactions === "ban"
+              ? "This preset had a fixed faction pool, but the ban phase is on, so factions are rolled after the bans instead."
+              : "This preset had a fixed faction pool that doesn't fit your faction bags, so factions were re-rolled to fill them."}
           </Notice>
         )}
       </div>
