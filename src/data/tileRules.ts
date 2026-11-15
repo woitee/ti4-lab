@@ -60,21 +60,11 @@ export const spaceStationRules: string[] = [
   "Exhaust it at any time to convert your commodities to trade goods.",
 ];
 
-/** Rules notes for legendary planets that have no ability text in the data. */
-export const legendaryNotes: Record<string, RulesEntry> = {
-  Mallice: {
-    title: "Mallice — Wormhole Nexus",
-    lines: [
-      "No legendary ability card.",
-      "The Wormhole Nexus starts on its inactive side. It flips to its active side (alpha, beta and gamma wormholes) when a player moves or places a unit into it, or gains control of Mallice.",
-    ],
-  },
-  Ordinian: {
-    title: "Ordinian",
-    lines: [
-      "Legendary planet. Its ability text isn't in TI4 Lab's data yet — check the planet card.",
-    ],
-  },
+/** Extra rules lines shown after a legendary planet's ability text. */
+export const legendaryNotes: Record<string, string[]> = {
+  Mallice: [
+    "Wormhole Nexus: starts on its inactive side (gamma wormhole only). The first time a player moves or places a unit into it, or gains control of Mallice, it flips to its active side (alpha, beta and gamma wormholes).",
+  ],
 };
 
 const traitLabels: Record<PlanetTrait, string> = {
@@ -105,14 +95,14 @@ export function planetRules(planet: Planet): RulesEntry | undefined {
   if (!planet.legendary) return undefined;
 
   const meta = planetMeta(planet, "Legendary");
-  if (planet.legendaryDescription) {
-    return {
-      title: planet.legendaryTitle ?? planet.name,
-      meta,
-      lines: [planet.legendaryDescription],
-    };
-  }
-  const note = legendaryNotes[planet.name];
-  if (note) return { ...note, meta };
-  return undefined;
+  const notes = legendaryNotes[planet.name] ?? [];
+  if (!planet.legendaryDescription && notes.length === 0) return undefined;
+  return {
+    title: planet.legendaryTitle ?? planet.name,
+    meta,
+    lines: [
+      ...(planet.legendaryDescription ? [planet.legendaryDescription] : []),
+      ...notes,
+    ],
+  };
 }

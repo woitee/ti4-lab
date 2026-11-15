@@ -25,6 +25,16 @@ describe("tile rules popovers", () => {
     }
   });
 
+  it("shows the legendary ability card for Mallice and Ordinian", () => {
+    for (const name of ["Mallice", "Ordinian"]) {
+      const planet = planets.find((p) => p.name === name)!;
+      expect(planet.legendaryDescription, name).toBeTruthy();
+      expect(planetRules(planet)!.lines[0], name).toBe(
+        planet.legendaryDescription,
+      );
+    }
+  });
+
   it("has rules for every space station", () => {
     const stations = planets.filter((p) => p.tradeStation);
     expect(stations.length).toBeGreaterThan(0);

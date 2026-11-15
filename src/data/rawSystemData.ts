@@ -1083,6 +1083,9 @@ export const rawSystems: Record<string, RawSystem> = {
         resources: 0,
         influence: 3,
         legendary: true,
+        legendaryTitle: "Exterrix Headquarters",
+        legendaryDescription:
+          "You may exhaust this card at the end of your turn to gain 2 trade goods or convert all of your commodities into trade goods.",
         trait: ["CULTURAL"],
       },
     ],
@@ -1296,6 +1299,9 @@ export const rawSystems: Record<string, RawSystem> = {
         resources: 0,
         influence: 0,
         legendary: true,
+        legendaryTitle: '4X41D "Hyperion" VI',
+        legendaryDescription:
+          "You may exhaust this card when you pass to draw 1 action card and gain 1 command token.",
       },
       {
         name: "Revelation",
