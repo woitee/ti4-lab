@@ -143,7 +143,7 @@ export function BrowsePresetsModal({
                       <Tag tone={preset.keepFactions ? "neutral" : "ion"}>
                         {preset.keepFactions
                           ? "Factions fixed"
-                          : "Factions re-rolled"}
+                          : "Random factions"}
                       </Tag>
                     </span>
                   </span>

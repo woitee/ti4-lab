@@ -143,7 +143,7 @@ function AdminPresets() {
                 {preset.playerCount}P
               </span>
               <span className={styles.date} data-label="Factions">
-                {preset.keepFactions ? "Fixed" : "Re-rolled"}
+                {preset.keepFactions ? "Fixed" : "Random"}
               </span>
               <span className={styles.num} data-label="Order">
                 {preset.featured ? preset.sortOrder : "–"}

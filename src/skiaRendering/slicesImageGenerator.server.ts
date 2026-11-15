@@ -33,10 +33,16 @@ import { systemsInSlice } from "~/utils/slice";
 import { draftConfig } from "~/draft/draftConfig";
 import { formatSliceValue } from "~/stats";
 
+type PresetImageOptions = {
+  urlText?: string;
+  /** Shown in the factions column when the draft lists no factions. */
+  factionsNote?: string;
+};
+
 export async function generateDraftSlicesImage(
   draft: Draft,
   draftId: string,
-  options: { urlText?: string } = {},
+  options: PresetImageOptions = {},
 ): Promise<Buffer> {
   initializeFonts();
   await loadAllAssets();
@@ -93,6 +99,7 @@ export async function generateDraftSlicesImage(
     draft,
     slicesWidth + factionColumnGap,
     slicesLabelY + sectionLabelHeight + 15,
+    options.factionsNote,
   );
 
   const sliceValueConfig = draftSliceValueConfig(
@@ -129,7 +136,7 @@ export async function generateDraftSlicesImage(
 export async function generatePresetDraftImage(
   draft: Draft,
   draftId: string,
-  options: { urlText?: string } = {},
+  options: PresetImageOptions = {},
 ): Promise<Buffer> {
   initializeFonts();
   await loadAllAssets();
@@ -199,6 +206,7 @@ export async function generatePresetDraftImage(
     draft,
     slicesWidth + factionColumnGap,
     slicesLabelY + sectionLabelHeight + 15,
+    options.factionsNote,
   );
 
   const mapAreaX = gap;
@@ -250,7 +258,16 @@ function drawFactionList(
   draft: Draft,
   x: number,
   y: number,
+  emptyNote?: string,
 ): void {
+  if (emptyNote && !draft.availableFactions?.length) {
+    ctx.font = "32px Quantico, sans-serif";
+    ctx.fillStyle = "rgba(255, 255, 255, 0.75)";
+    ctx.textAlign = "left";
+    ctx.textBaseline = "middle";
+    ctx.fillText(emptyNote, x, y + 55);
+    return;
+  }
   const factionIconCache = getFactionIconCache();
   if (!factionIconCache || !draft.availableFactions) return;
 

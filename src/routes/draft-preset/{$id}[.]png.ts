@@ -26,7 +26,7 @@ export const Route = createFileRoute("/draft-preset/{$id}.png")({
         if (!image) {
           const draft = {
             ...preset.data,
-            // Re-rolled factions differ every draft, so don't show the saved ones.
+            // Random factions differ every draft, so don't show the saved ones.
             availableFactions: preset.keepFactions
               ? preset.data.availableFactions
               : [],
@@ -40,6 +40,7 @@ export const Route = createFileRoute("/draft-preset/{$id}.png")({
           } as Draft;
           const options = {
             urlText: `${displayHost(requestPublicBaseUrl())}/draft/prechoice`,
+            factionsNote: preset.keepFactions ? undefined : "Random factions",
           };
           image =
             draft.settings.draftGameMode === "presetMap"

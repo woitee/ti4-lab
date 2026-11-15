@@ -110,7 +110,7 @@ export function SaveToHubModal({ draft, opened, onClose }: Props) {
         />
         <Checkbox
           label="Save factions"
-          description="Keep the exact factions (and minor factions or kings) shown here. When off, factions are re-rolled each time you start a draft from it."
+          description="Keep the exact factions (and minor factions or kings) shown here. When off, factions are random each time you start a draft from it."
           checked={keepFactions}
           onChange={setKeepFactions}
         />
@@ -195,7 +195,7 @@ export function SaveDraftPresetModal({ draft, opened, onClose }: Props) {
 
         <Checkbox
           label="Save factions"
-          description="Keep the exact factions (and minor factions or kings) shown here. When off, factions are re-rolled when you continue from the preset or start it through the bot."
+          description="Keep the exact factions (and minor factions or kings) shown here. When off, factions are random when you continue from the preset or start it through the bot."
           checked={keepFactions}
           onChange={setKeepFactions}
         />
