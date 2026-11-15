@@ -1,4 +1,5 @@
 import { useSlice } from "~/components/Slice";
+import { FactionTierBadge } from "~/components/FactionTierBadge";
 import { SliceFeatures } from "~/components/Slice/SliceFeatures";
 import { FactionIcon } from "~/components/icons/FactionIcon";
 import { factions } from "~/data/factionData";
@@ -38,6 +39,7 @@ export function SummaryRow({ player, slice, showSeat, showPlayerColor }: Props) 
             <span className={classes.factionName} title={faction?.name}>
               {faction?.name ?? "No faction"}
             </span>
+            {faction && <FactionTierBadge factionId={faction.id} />}
             {faction && <FactionHelpInfo faction={faction} compact />}
           </span>
           <span className={classes.picks}>

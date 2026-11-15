@@ -20,7 +20,7 @@
 }
 
 .name {
-  flex: 1;
+  flex: 0 1 auto;
   min-width: 0;
   display: -webkit-box;
   -webkit-box-orient: vertical;
@@ -32,6 +32,7 @@
 }
 
 .priority {
+  margin-left: auto;
   display: grid;
   place-items: center;
   flex-shrink: 0;

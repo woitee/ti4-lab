@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import { FactionTierBadge } from "~/components/FactionTierBadge";
 import { Row, Tag } from "~/ui";
 import { MahactKingReference as MahactKingReferenceData } from "~/data/mahactKingReferences";
 import { Faction } from "~/types";
@@ -24,7 +25,9 @@ export function MahactKingReference({ faction, reference }: Props) {
         />
         <div className={classes.titles}>
           <p className={classes.kicker}>Mahact king</p>
-          <h3 className={classes.name}>{faction.name}</h3>
+          <h3 className={classes.name}>
+            {faction.name} <FactionTierBadge factionId={faction.id} />
+          </h3>
         </div>
         <Tag>{reference.commodities} commodities</Tag>
       </div>

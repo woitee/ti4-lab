@@ -1,3 +1,4 @@
+import { FactionTierBadge } from "~/components/FactionTierBadge";
 import {
   IconShare,
   IconPlayerPlay,
@@ -188,6 +189,10 @@ export function FinalizedDraft() {
                             <span className={classes.factionName}>
                               {startingUnitsFaction.name}
                             </span>
+                            <FactionTierBadge
+                              factionId={startingUnitsFaction.id}
+                              size="sm"
+                            />
                           </span>
                         </Table.Td>
                         <Table.Td>

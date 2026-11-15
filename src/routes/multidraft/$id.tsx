@@ -54,6 +54,7 @@ function MultidraftRoute() {
                       key={faction}
                       faction={factions[faction]}
                       compact
+                      showTier={!!data.settings.showTierBadges}
                     />
                   ))}
                 </div>

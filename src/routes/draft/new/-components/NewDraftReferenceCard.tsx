@@ -1,4 +1,5 @@
 import { FactionIcon } from "~/components/icons/FactionIcon";
+import { FactionTierBadge } from "~/components/FactionTierBadge";
 import { Faction } from "~/types";
 import { factionSystems } from "~/data/systemData";
 import { StartingUnitsTable } from "~/components/StartingUnitsTable";
@@ -19,6 +20,7 @@ export function NewDraftReferenceCard({ faction }: Props) {
         <span className={styles.name} title={faction.name}>
           {faction.name}
         </span>
+        <FactionTierBadge factionId={faction.id} size="sm" />
         {faction.priorityOrder !== undefined && (
           <span
             className={styles.priority}

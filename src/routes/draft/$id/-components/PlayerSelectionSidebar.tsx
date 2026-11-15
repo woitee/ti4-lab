@@ -1,4 +1,5 @@
 import { IconCheck } from "@tabler/icons-react";
+import { FactionTierBadge } from "~/components/FactionTierBadge";
 import { Bracket, Panel, PlayerHex, Tag, cx, playerVar } from "~/ui";
 import type { CSSProperties } from "react";
 import { factions as allFactions } from "~/data/factionData";
@@ -115,6 +116,10 @@ export function PlayerSelectionSidebar({
                       Priority {priorityValueFaction.priorityOrder}:{" "}
                       {priorityValueFaction.name}
                     </span>
+                    <FactionTierBadge
+                      factionId={priorityValueFaction.id}
+                      size="sm"
+                    />
                   </span>
                 )}
               </Element>

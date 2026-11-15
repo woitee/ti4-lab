@@ -12,6 +12,8 @@ type Props = {
   onRemove?: () => void;
   /** Smaller chip, for read-only lists. */
   compact?: boolean;
+  /** Tier badge on/off; defaults to the current draft's setting. */
+  showTier?: boolean;
 };
 
 export function NewDraftFaction({
@@ -19,6 +21,7 @@ export function NewDraftFaction({
   removeEnabled = true,
   onRemove,
   compact,
+  showTier,
 }: Props) {
   return (
     <div className={cx(classes.faction, compact && classes.compact)}>
@@ -27,7 +30,11 @@ export function NewDraftFaction({
         <span className={classes.name} title={faction.name}>
           {faction.name}
         </span>
-        <FactionTierBadge factionId={faction.id} />
+        <FactionTierBadge
+          factionId={faction.id}
+          show={showTier}
+          size={compact ? "sm" : "md"}
+        />
       </span>
       {onRemove && (
         <IconButton

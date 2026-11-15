@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { factions } from "~/data/factionData";
 import type { Draft, DraftSelection, FactionId } from "~/types";
 import { cx, useLanded } from "~/ui";
+import { FactionTierBadge } from "~/components/FactionTierBadge";
 import { shortFactionName, speakerOrdinal } from "./draftOrderUtils";
 import classes from "./PickToken.module.css";
 
@@ -127,6 +128,9 @@ export function PickToken({ kind, label, value, factionId, color, empty, variant
         <span className={classes.text} data-part="text">
           {label}
         </span>
+      )}
+      {factionId && !empty && (kind === "faction" || kind === "minor" || kind === "ban") && (
+        <FactionTierBadge factionId={factionId} size="sm" />
       )}
     </span>
   );
