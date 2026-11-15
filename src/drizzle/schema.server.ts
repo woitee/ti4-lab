@@ -322,3 +322,15 @@ export const hubSliceSets = sqliteTable(
     hubIdx: index("hub_slice_sets_hub_id_index").on(table.hubId),
   }),
 );
+
+/**
+ * Admin-curated faction tier list. A single row (id = 1) holding JSON
+ * { factionId: tier }; with no row the default in ~/utils/factionTiers applies.
+ */
+export const factionTierList = sqliteTable("factionTierList", {
+  id: integer("id").primaryKey(),
+  data: text("data").notNull(),
+  updatedAt: text("updatedAt")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});

@@ -1,4 +1,5 @@
 import { FactionIcon } from "~/components/icons/FactionIcon";
+import { FactionTierBadge } from "~/components/FactionTierBadge";
 import { Faction, HydratedPlayer } from "~/types";
 import { PlayerChipOrSelect } from "./PlayerChipOrSelect";
 import { FactionHelpInfo } from "~/routes/draft/$id/-components/FactionHelpInfo";
@@ -53,8 +54,11 @@ export function DraftableFaction({
       header={
         <>
           <FactionIcon faction={faction.id} className={classes.icon} style={{ width: 28, height: 28 }} />
-          <span className={classes.name} title={faction.name}>
-            {faction.name}
+          <span className={classes.nameLine}>
+            <span className={classes.name} title={faction.name}>
+              {faction.name}
+            </span>
+            <FactionTierBadge factionId={faction.id} />
           </span>
           <PlayerChipOrSelect
             player={player}

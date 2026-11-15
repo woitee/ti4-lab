@@ -58,6 +58,9 @@ function AdminLayout() {
             <Link to="/admin/presets" className={classes.tab} activeProps={{ className: classes.active }}>
               Presets
             </Link>
+            <Link to="/admin/tiers" className={classes.tab} activeProps={{ className: classes.active }}>
+              Tier list
+            </Link>
           </nav>
           {authEnabled && (
             <div className={classes.logout}>

@@ -53,6 +53,7 @@ export const useDraftSettingsBuilder = (
       randomizeSlices: true,
       draftSpeaker: format.draftSpeaker,
       showMonumentImagesInFactionInfo: format.showMonumentImagesInFactionInfo,
+      showTierBadges: format.showTierBadges,
       allowHomePlanetSearch: format.allowHomePlanetSearch,
       allowEmptyTiles: format.allowEmptyTiles,
       draftPlayerColors: format.draftPlayerColors,

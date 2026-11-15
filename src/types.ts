@@ -233,6 +233,8 @@ export type DraftSettings = {
   tileGameSets: GameSet[];
   draftSpeaker: boolean;
   showMonumentImagesInFactionInfo?: boolean;
+  /** Show the admin tier list's badges next to faction names. Off when absent (older drafts). */
+  showTierBadges?: boolean;
 
   /** If specified, only these factions are allowed in the draft */
   allowedFactions?: FactionId[];

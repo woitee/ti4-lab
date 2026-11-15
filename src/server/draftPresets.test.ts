@@ -29,9 +29,12 @@ function migrationsBeforeFeature() {
   cpSync(MIGRATIONS, folder, { recursive: true });
   const journalPath = join(folder, "meta/_journal.json");
   const journal = JSON.parse(readFileSync(journalPath, "utf8"));
-  journal.entries = journal.entries.filter(
-    (entry: { tag: string }) => entry.tag !== FEATURE_MIGRATION,
+  // Drop it and everything after it (drizzle skips migrations older than the
+  // newest applied one, so later ones must not be applied first).
+  const cut = journal.entries.findIndex(
+    (entry: { tag: string }) => entry.tag === FEATURE_MIGRATION,
   );
+  journal.entries = journal.entries.slice(0, cut);
   writeFileSync(journalPath, JSON.stringify(journal));
   rmSync(join(folder, `${FEATURE_MIGRATION}.sql`));
   return folder;

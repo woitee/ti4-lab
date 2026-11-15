@@ -260,6 +260,7 @@ function DraftPrechoice() {
         randomizeSlices: true,
         draftSpeaker: false,
         showMonumentImagesInFactionInfo: format.showMonumentImagesInFactionInfo,
+        showTierBadges: format.showTierBadges,
         allowHomePlanetSearch: false,
         allowEmptyTiles: false,
         draftPlayerColors: false,
@@ -375,6 +376,11 @@ function DraftPrechoice() {
           droppedFixedFactions,
           savedDraftState: {
             ...data,
+            // "Show tier badges" sits in the same "Draft rules" block.
+            settings:
+              draftMode === "base"
+                ? { ...data.settings, showTierBadges: format.showTierBadges }
+                : data.settings,
             integrations: { discord: discordData },
             players: adjustedPlayers,
             selections: [],

@@ -6,6 +6,7 @@ import { mahactKingReferences } from "~/data/mahactKingReferences";
 import { MahactKingReference } from "./MahactKingReference";
 import { factionSummaries } from "~/data/factionSummaries";
 import { FactionSummary } from "./FactionSummary";
+import { FactionTierBadge } from "~/components/FactionTierBadge";
 import classes from "./FactionHelpInfo.module.css";
 
 type Props = {
@@ -52,7 +53,16 @@ export function FactionHelpInfo({ faction, compact = false }: Props) {
         opened={opened}
         onClose={close}
         size={kingReference || showMonumentImage ? "xl" : "lg"}
-        title={kingReference ? `${faction.name} reference` : faction.name}
+        title={
+          kingReference ? (
+            `${faction.name} reference`
+          ) : (
+            <span className={classes.title}>
+              {faction.name}
+              <FactionTierBadge factionId={faction.id} />
+            </span>
+          )
+        }
       >
         {kingReference ? (
           <MahactKingReference faction={faction} reference={kingReference} />

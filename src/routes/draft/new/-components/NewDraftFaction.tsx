@@ -1,6 +1,7 @@
 import { IconX } from "@tabler/icons-react";
 import { Faction } from "~/types";
 import { FactionIcon } from "~/components/icons/FactionIcon";
+import { FactionTierBadge } from "~/components/FactionTierBadge";
 import { IconButton, cx } from "~/ui";
 
 import classes from "./NewDraftFaction.module.css";
@@ -22,8 +23,11 @@ export function NewDraftFaction({
   return (
     <div className={cx(classes.faction, compact && classes.compact)}>
       <FactionIcon faction={faction.id} style={compact ? { width: 18, height: 18, flexShrink: 0 } : { width: 28, height: 28, flexShrink: 0 }} />
-      <span className={classes.name} title={faction.name}>
-        {faction.name}
+      <span className={classes.nameLine}>
+        <span className={classes.name} title={faction.name}>
+          {faction.name}
+        </span>
+        <FactionTierBadge factionId={faction.id} />
       </span>
       {onRemove && (
         <IconButton

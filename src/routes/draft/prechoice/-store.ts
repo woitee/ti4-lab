@@ -124,12 +124,14 @@ type DraftSetupStore = {
     allowEmptyTiles: boolean;
     allowHomePlanetSearch: boolean;
     showMonumentImagesInFactionInfo: boolean;
+    showTierBadges: boolean;
     setDraftSpeaker: (v: boolean) => void;
     setBanFactions: (v: boolean) => void;
     setDraftPlayerColors: (v: boolean) => void;
     setAllowEmptyTiles: (v: boolean) => void;
     setAllowHomePlanetSearch: (v: boolean) => void;
     setShowMonumentImagesInFactionInfo: (v: boolean) => void;
+    setShowTierBadges: (v: boolean) => void;
   };
   multidraft: {
     isMultidraft: boolean;
@@ -643,6 +645,7 @@ export const useDraftSetup = create<DraftSetupStore>()(
         allowEmptyTiles: false,
         allowHomePlanetSearch: false,
         showMonumentImagesInFactionInfo: false,
+        showTierBadges: true,
 
         setDraftSpeaker: (v: boolean) => {
           setAndValidate((state) => {
@@ -677,6 +680,12 @@ export const useDraftSetup = create<DraftSetupStore>()(
         setShowMonumentImagesInFactionInfo: (v: boolean) => {
           setAndValidate((state) => {
             state.format.showMonumentImagesInFactionInfo = v;
+          });
+        },
+
+        setShowTierBadges: (v: boolean) => {
+          setAndValidate((state) => {
+            state.format.showTierBadges = v;
           });
         },
       },
@@ -944,6 +953,7 @@ export function rememberedSetupOf(state: DraftSetupStore): RememberedSetup {
       allowEmptyTiles: format.allowEmptyTiles,
       allowHomePlanetSearch: format.allowHomePlanetSearch,
       showMonumentImagesInFactionInfo: format.showMonumentImagesInFactionInfo,
+      showTierBadges: format.showTierBadges,
     },
     multidraft: {
       isMultidraft: multidraft.isMultidraft,

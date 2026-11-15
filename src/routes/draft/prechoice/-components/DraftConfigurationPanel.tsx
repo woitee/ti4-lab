@@ -1,4 +1,5 @@
 import type { KeyboardEvent, MouseEvent, ReactNode } from "react";
+import { TierBadge } from "~/components/FactionTierBadge";
 import {
   IconAdjustmentsHorizontal,
   IconAlien,
@@ -339,6 +340,18 @@ export function DraftConfigurationPanel({ maxSlices }: Props) {
                 </span>
               )
             }
+          />
+          <RuleCard
+            title="Show tier badges"
+            description="Tier list badge next to each faction's name"
+            art={
+              <>
+                <TierBadge tier="S" />
+                <TierBadge tier="A" />
+              </>
+            }
+            checked={format.showTierBadges}
+            onToggle={() => format.setShowTierBadges(!format.showTierBadges)}
           />
         </div>
       </Panel>

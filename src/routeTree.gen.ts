@@ -24,6 +24,7 @@ import { Route as AdminDraftsRouteRouteImport } from "./routes/admin/drafts/rout
 import { Route as AdminLoginRouteRouteImport } from "./routes/admin/login/route";
 import { Route as AdminMapsRouteRouteImport } from "./routes/admin/maps/route";
 import { Route as AdminPresetsRouteRouteImport } from "./routes/admin/presets/route";
+import { Route as AdminTiersRouteRouteImport } from "./routes/admin/tiers/route";
 import { Route as DraftPresetChar123idChar125DotpngRouteImport } from "./routes/draft-preset/{$id}[.]png";
 import { Route as DraftNewRouteRouteImport } from "./routes/draft/new/route";
 import { Route as DraftPrechoiceRouteRouteImport } from "./routes/draft/prechoice/route";
@@ -120,6 +121,11 @@ const AdminMapsRouteRoute = AdminMapsRouteRouteImport.update({
 const AdminPresetsRouteRoute = AdminPresetsRouteRouteImport.update({
   id: "/presets",
   path: "/presets",
+  getParentRoute: () => AdminRouteRoute,
+} as any);
+const AdminTiersRouteRoute = AdminTiersRouteRouteImport.update({
+  id: "/tiers",
+  path: "/tiers",
   getParentRoute: () => AdminRouteRoute,
 } as any);
 const DraftPresetChar123idChar125DotpngRoute =
@@ -252,6 +258,7 @@ export interface FileRoutesByFullPath {
   "/admin/login": typeof AdminLoginRouteRoute;
   "/admin/maps": typeof AdminMapsRouteRoute;
   "/admin/presets": typeof AdminPresetsRouteRoute;
+  "/admin/tiers": typeof AdminTiersRouteRoute;
   "/draft/new": typeof DraftNewRouteRoute;
   "/draft/prechoice": typeof DraftPrechoiceRouteRoute;
   "/draft/tournament": typeof DraftTournamentRouteRoute;
@@ -289,6 +296,7 @@ export interface FileRoutesByTo {
   "/admin/login": typeof AdminLoginRouteRoute;
   "/admin/maps": typeof AdminMapsRouteRoute;
   "/admin/presets": typeof AdminPresetsRouteRoute;
+  "/admin/tiers": typeof AdminTiersRouteRoute;
   "/draft/new": typeof DraftNewRouteRoute;
   "/draft/prechoice": typeof DraftPrechoiceRouteRoute;
   "/draft/tournament": typeof DraftTournamentRouteRoute;
@@ -329,6 +337,7 @@ export interface FileRoutesById {
   "/admin/login": typeof AdminLoginRouteRoute;
   "/admin/maps": typeof AdminMapsRouteRoute;
   "/admin/presets": typeof AdminPresetsRouteRoute;
+  "/admin/tiers": typeof AdminTiersRouteRoute;
   "/draft/new": typeof DraftNewRouteRoute;
   "/draft/prechoice": typeof DraftPrechoiceRouteRoute;
   "/draft/tournament": typeof DraftTournamentRouteRoute;
@@ -370,6 +379,7 @@ export interface FileRouteTypes {
     | "/admin/login"
     | "/admin/maps"
     | "/admin/presets"
+    | "/admin/tiers"
     | "/draft/new"
     | "/draft/prechoice"
     | "/draft/tournament"
@@ -407,6 +417,7 @@ export interface FileRouteTypes {
     | "/admin/login"
     | "/admin/maps"
     | "/admin/presets"
+    | "/admin/tiers"
     | "/draft/new"
     | "/draft/prechoice"
     | "/draft/tournament"
@@ -446,6 +457,7 @@ export interface FileRouteTypes {
     | "/admin/login"
     | "/admin/maps"
     | "/admin/presets"
+    | "/admin/tiers"
     | "/draft/new"
     | "/draft/prechoice"
     | "/draft/tournament"
@@ -596,6 +608,13 @@ declare module "@tanstack/react-router" {
       path: "/presets";
       fullPath: "/admin/presets";
       preLoaderRoute: typeof AdminPresetsRouteRouteImport;
+      parentRoute: typeof AdminRouteRoute;
+    };
+    "/admin/tiers": {
+      id: "/admin/tiers";
+      path: "/tiers";
+      fullPath: "/admin/tiers";
+      preLoaderRoute: typeof AdminTiersRouteRouteImport;
       parentRoute: typeof AdminRouteRoute;
     };
     "/draft-preset/{$id}.png": {
@@ -760,6 +779,7 @@ interface AdminRouteRouteChildren {
   AdminLoginRouteRoute: typeof AdminLoginRouteRoute;
   AdminMapsRouteRoute: typeof AdminMapsRouteRoute;
   AdminPresetsRouteRoute: typeof AdminPresetsRouteRoute;
+  AdminTiersRouteRoute: typeof AdminTiersRouteRoute;
   AdminDraftsIdRawRoute: typeof AdminDraftsIdRawRoute;
 }
 
@@ -768,6 +788,7 @@ const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminLoginRouteRoute: AdminLoginRouteRoute,
   AdminMapsRouteRoute: AdminMapsRouteRoute,
   AdminPresetsRouteRoute: AdminPresetsRouteRoute,
+  AdminTiersRouteRoute: AdminTiersRouteRoute,
   AdminDraftsIdRawRoute: AdminDraftsIdRawRoute,
 };
 

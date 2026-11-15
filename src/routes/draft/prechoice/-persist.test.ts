@@ -13,6 +13,26 @@ const defaults: RememberedState = {
 };
 
 describe("parseRememberedState", () => {
+  test("show tier badges: on by default, remembered when turned off", () => {
+    expect(DEFAULT_REMEMBERED_SETUP.format.showTierBadges).toBe(true);
+    // Saved before the setting existed: falls back to on.
+    const { showTierBadges: _omit, ...oldFormat } =
+      DEFAULT_REMEMBERED_SETUP.format;
+    const old = JSON.stringify({
+      version: 1,
+      setup: { ...DEFAULT_REMEMBERED_SETUP, format: oldFormat },
+    });
+    expect(parseRememberedState(old, defaults)?.setup.format.showTierBadges).toBe(true);
+    const off = serializeRememberedState({
+      ...defaults,
+      setup: {
+        ...DEFAULT_REMEMBERED_SETUP,
+        format: { ...DEFAULT_REMEMBERED_SETUP.format, showTierBadges: false },
+      },
+    });
+    expect(parseRememberedState(off, defaults)?.setup.format.showTierBadges).toBe(false);
+  });
+
   test("nothing stored", () => {
     expect(parseRememberedState(null, defaults)).toBeUndefined();
   });

@@ -37,3 +37,9 @@
 .summaryName { margin-top: 2px; color: var(--text); font-size: 15px; font-weight: 600; }
 .summaryText { margin: 6px 0 0; color: var(--text); font-size: 13px; line-height: 1.45; }
 .summaryNote { margin: 6px 0 0; color: var(--text-faint); font-size: 12px; font-style: italic; }
+
+.title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
