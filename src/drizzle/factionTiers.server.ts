@@ -3,8 +3,10 @@ import { db } from "./config.server";
 import { factionTierList } from "./schema.server";
 import {
   DEFAULT_FACTION_TIERS,
-  parseFactionTierList,
+  parseStoredTierList,
+  resolveTierList,
   type FactionTierList,
+  type StoredTierList,
 } from "~/utils/factionTiers";
 
 const ROW_ID = 1;
@@ -33,13 +35,13 @@ export async function getStoredFactionTiers(): Promise<StoredFactionTiers> {
     data = {};
   }
   return {
-    tiers: parseFactionTierList(data),
+    tiers: resolveTierList(parseStoredTierList(data)),
     customized: true,
     updatedAt: row.updatedAt,
   };
 }
 
-export async function saveFactionTiers(tiers: FactionTierList) {
+export async function saveFactionTiers(tiers: StoredTierList) {
   const data = JSON.stringify(tiers);
   await db
     .insert(factionTierList)

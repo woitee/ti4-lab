@@ -5,8 +5,8 @@ import {
   saveFactionTiers,
 } from "~/drizzle/factionTiers.server";
 import {
-  parseFactionTierList,
-  type FactionTierList,
+  parseStoredTierList,
+  type StoredTierList,
 } from "~/utils/factionTiers";
 import { requireAdmin } from "./admin.functions";
 import { expectRecord } from "./validate";
@@ -23,8 +23,8 @@ export const getAdminFactionTiers = createServerFn()
 
 export const setFactionTiers = createServerFn({ method: "POST" })
   .middleware([requireAdmin])
-  .validator((input: { tiers: FactionTierList }) => ({
-    tiers: parseFactionTierList(expectRecord(input).tiers, { strict: true }),
+  .validator((input: { tiers: StoredTierList }) => ({
+    tiers: parseStoredTierList(expectRecord(input).tiers, { strict: true }),
   }))
   .handler(async ({ data: { tiers } }) => {
     await saveFactionTiers(tiers);

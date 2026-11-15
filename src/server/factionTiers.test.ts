@@ -8,10 +8,14 @@ import { drizzle } from "drizzle-orm/better-sqlite3";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import {
   DEFAULT_FACTION_TIERS,
-  parseFactionTierList,
+  parseStoredTierList,
+  toStoredTierList,
 } from "~/utils/factionTiers";
 import {
+  allFactionIds,
   baseFactionIds,
+  factionDiscordantExpIds,
+  factionDiscordantIds,
   pokFactionIds,
   teFactionIds,
 } from "~/data/factionData";
@@ -70,17 +74,30 @@ beforeEach(() => {
 describe("default tier list", () => {
   it("matches the owner's list", () => {
     expect(DEFAULT_FACTION_TIERS).toEqual({
+      yssaril: "S+",
       mahact: "S", crimson: "S", sol: "S", saar: "S", dws: "S", jolnar: "S",
-      yssaril: "A", titans: "A", vulraith: "A", hacan: "A", naazrokha: "A", creuss: "A",
+      titans: "A", vulraith: "A", hacan: "A", naazrokha: "A", creuss: "A",
       naalu: "B", nekro: "B", empyrean: "B", keleres: "B", barony: "B", nomad: "B",
       yin: "C", ralnel: "C", l1z1x: "C", arborec: "C", bastion: "C",
       winnu: "D", muaat: "D", sardakk: "D",
       argent: "F", mentak: "F", xxcha: "F", firmament: "F",
+      // Discordant Stars
+      edyn: "S", bentor: "S", nivyn: "S", kollecc: "S", veldyr: "S",
+      khrask: "A", olradin: "A", ilyxum: "A",
+      mirveda: "B", rhodun: "B", vaden: "B", axis: "B", kjalengard: "B",
+      gledge: "B", rohdina: "B", lanefir: "B", cheiran: "B", lizho: "B",
+      myko: "C", tnelis: "C", freesystems: "C", vaylerian: "C", florzen: "C",
+      celdauri: "D", mortheus: "D", ghoti: "D", zelian: "D", kolume: "D",
+      kortali: "D", dihmohn: "D",
+      nokar: "F", cymiae: "F", ghemina: "F", kyro: "F",
     });
   });
 
-  it("covers every base, PoK and Thunder's Edge faction", () => {
-    const core = [...baseFactionIds, ...pokFactionIds, ...teFactionIds];
+  it("covers every base, PoK, Thunder's Edge and Discordant Stars faction", () => {
+    const core = [
+      ...baseFactionIds, ...pokFactionIds, ...teFactionIds,
+      ...factionDiscordantIds, ...factionDiscordantExpIds,
+    ];
     expect(Object.keys(DEFAULT_FACTION_TIERS).sort()).toEqual(core.sort());
   });
 });
@@ -88,14 +105,14 @@ describe("default tier list", () => {
 describe("tier list validation", () => {
   it("drops unknown factions and tiers leniently", () => {
     expect(
-      parseFactionTierList({ sol: "S", nope: "A", hacan: "Z", xxcha: null }),
-    ).toEqual({ sol: "S" });
+      parseStoredTierList({ sol: "S+", nope: "A", hacan: "Z", xxcha: null }),
+    ).toEqual({ sol: "S+", xxcha: null });
   });
 
   it("rejects them strictly (admin input)", () => {
-    expect(() => parseFactionTierList({ nope: "A" }, { strict: true })).toThrow();
-    expect(() => parseFactionTierList({ sol: "Z" }, { strict: true })).toThrow();
-    expect(() => parseFactionTierList([], { strict: true })).toThrow();
+    expect(() => parseStoredTierList({ nope: "A" }, { strict: true })).toThrow();
+    expect(() => parseStoredTierList({ sol: "Z" }, { strict: true })).toThrow();
+    expect(() => parseStoredTierList([], { strict: true })).toThrow();
   });
 });
 
@@ -120,13 +137,39 @@ describe("stored tier list", () => {
     await store.saveFactionTiers({ sol: "F", hacan: "S" });
     await store.saveFactionTiers({ sol: "A" });
     const saved = await store.getStoredFactionTiers();
-    expect(saved.tiers).toEqual({ sol: "A" });
+    expect(saved.tiers).toEqual({ ...DEFAULT_FACTION_TIERS, sol: "A" });
     expect(saved.customized).toBe(true);
 
     await store.resetFactionTiers();
+    expect((await store.getStoredFactionTiers()).customized).toBe(false);
     expect((await store.getStoredFactionTiers()).tiers).toEqual(
       DEFAULT_FACTION_TIERS,
     );
+  });
+});
+
+describe("merging a saved list with the code default", () => {
+  it("factions the saved list doesn't mention get their default", async () => {
+    // e.g. a list saved before DS factions were added to the default
+    await store.saveFactionTiers({ sol: "F", edyn: null });
+    const { tiers } = await store.getStoredFactionTiers();
+    expect(tiers.sol).toBe("F");
+    expect(tiers.edyn).toBeUndefined(); // explicit "no tier" stays off
+    expect(tiers.bentor).toBe("S"); // not mentioned: default
+    expect(tiers.yssaril).toBe("S+");
+    await store.resetFactionTiers();
+  });
+
+  it("admin saves store an explicit no tier for every unranked faction", async () => {
+    const { yssaril: _y, kyro: _k, ...rest } = DEFAULT_FACTION_TIERS;
+    const stored = toStoredTierList(rest);
+    expect(Object.keys(stored).sort()).toEqual([...allFactionIds].sort());
+    expect(stored.yssaril).toBeNull();
+    expect(stored.kyro).toBeNull();
+    await store.saveFactionTiers(stored);
+    const { tiers } = await store.getStoredFactionTiers();
+    expect(tiers).toEqual(rest);
+    await store.resetFactionTiers();
   });
 });
 

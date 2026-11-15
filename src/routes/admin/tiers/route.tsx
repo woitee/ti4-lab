@@ -24,6 +24,7 @@ import {
 import {
   TIER_COLORS,
   TIERS,
+  toStoredTierList,
   type FactionTierList,
   type Tier,
 } from "~/utils/factionTiers";
@@ -75,7 +76,7 @@ function AdminTiers() {
   };
 
   const save = useMutation({
-    mutationFn: () => setFactionTiers({ data: { tiers } }),
+    mutationFn: () => setFactionTiers({ data: { tiers: toStoredTierList(tiers) } }),
     onSuccess: async () => {
       notify({ tone: "success", title: "Tier list saved" });
       await afterSave();
