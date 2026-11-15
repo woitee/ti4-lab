@@ -3,6 +3,7 @@ import { Hex } from "../Hex";
 import type { SystemTile } from "~/types";
 import { MapContext } from "~/contexts/MapContext";
 import { systemData } from "~/data/systemData";
+import { AnomalyMarkers, PlanetRulesMarkers } from "../RulesPopover";
 
 import classes from "./Tiles.module.css";
 
@@ -33,6 +34,8 @@ export function OriginalArtTile({ mapId, tile, children }: Props) {
           />
         }
       >
+        <AnomalyMarkers anomalies={system.anomalies} radius={radius} />
+        <PlanetRulesMarkers planets={system.planets} radius={radius} />
         {children}
       </Hex>
       <div

@@ -4,13 +4,27 @@ import { LegendaryIcon } from "../icons/LegendaryIcon";
 import { TradeStationIcon } from "../icons/TradeStationIcon";
 import { RulesPopover, useRulesPopover } from "./RulesPopover";
 
-type Props = { planet: Planet; size?: number };
+type Props = {
+  planet: Planet;
+  size?: number;
+  /** Extra hit area around the icon (for touch). */
+  pad?: number;
+};
 
 /** Standalone legendary / station icon that opens the planet's rules (e.g. slice feature row). */
-export function PlanetRulesMarker({ planet, size = 20 }: Props) {
+export function PlanetRulesMarker({ planet, size = 20, pad }: Props) {
   const { open, onOpenChange, hoverProps } = useRulesPopover();
   const entry = planetRules(planet);
   const icon = planet.tradeStation ? <TradeStationIcon size={size} /> : <LegendaryIcon size={size} />;
   if (!entry) return icon;
-  return <RulesPopover entry={entry} open={open} onOpenChange={onOpenChange} marker={icon} markerProps={hoverProps} />;
+  return (
+    <RulesPopover
+      entry={entry}
+      open={open}
+      onOpenChange={onOpenChange}
+      marker={icon}
+      markerStyle={pad ? { padding: pad } : undefined}
+      markerProps={hoverProps}
+    />
+  );
 }
